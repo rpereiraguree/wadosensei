@@ -24,9 +24,9 @@ export function seedClubs(){
     epocas:{'2025':{inicio:'2026-01-05',fim:'2026-06-30',meses:months('2026-01',6),poupInicial:80},'2026':{inicio:'2026-09-01',fim:'2027-07-31',meses:months('2026-09',11),poupInicial:200}},
     cfg:{valores:[{desde:'2025-09',1:20,2:28}],pctEspaco:[{desde:'2025-09',v:40}],poupMensal:[{desde:'2025-09',v:20}],poupShare:50,entNome:'Cart',poupNome:'Poupança CWK',
       descontos:[{tipo:'irmao',desde:'2025-09',v1:2.5,v2:5.5},{tipo:'irmao',desde:'2026-11',v1:5,v2:5},{tipo:'irmaoOutra',desde:'2026-11',v1:5,v2:5},{tipo:'amigo',desde:'2026-11',v1:5,v2:5,meses:3}],
-      descMax:10,pesoJ:0.2},icsExp:[]};
+      descMax:10,pesoJ:0.2,local:'CART',municipal:'06-24',pausas:[]},icsExp:[]};
   const flex={id:'flexgym',nome:'Flexgym',modelo:'professor',turmas:turmas('G'),
     horarios:[{desde:'2026-10-02',slots:[{t:'C',wd:2,ini:'18:30',fim:'19:30'},{t:'C',wd:5,ini:'18:30',fim:'19:30'},{t:'A',wd:5,ini:'18:30',fim:'20:00'}]}],
     epocas:{'2026':{inicio:'2026-10-02',fim:'2027-07-31',meses:months('2026-10',10),poupInicial:0}},
-    cfg:{valorAluno:14,valorAula:13,modeloPag:'aluno',pesoJ:0.2},icsExp:[]};
+    cfg:{valorAluno:14,valorAula:13,modeloPag:'aluno',pesoJ:0.2,local:'FlexGym',pausas:[]},icsExp:[]};
   return{cart:{doc:cart},flexgym:{doc:flex}}}

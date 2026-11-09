@@ -30,12 +30,20 @@ export function hist(list,at){let r=null;for(const x of (list||[]))if(x&&x.desde
 export const ESCALOES=[[6,'Fundamental'],[10,'Transitório'],[13,'Aplicação'],[999,'Permanente']];
 export function escalao(nasc,k){if(!nasc)return '';const a=ageAt(nasc,`${k}-12-31`);return ESCALOES.find(([max])=>a<=max)[1]}
 
+/* ---------- Feriados e pausas ---------- */
+function easter(y){const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;return `${y}-${pad(mo)}-${pad(da)}`}
+export function feriadosPT(y){const o={};const F=[['01-01','Ano Novo'],['04-25','25 de Abril'],['05-01','Dia do Trabalhador'],['06-10','Dia de Portugal'],['08-15','Assunção'],['10-05','Implantação da República'],['11-01','Todos os Santos'],['12-01','Restauração da Independência'],['12-08','Imaculada Conceição'],['12-25','Natal']];
+  for(const[md,n]of F)o[`${y}-${md}`]=n;const e=easter(y);o[addDays(e,-2)]='Sexta-feira Santa';o[e]='Páscoa';o[addDays(e,60)]='Corpo de Deus';return o}
+export function semAulas(club,d){const y=d.slice(0,4);const f=feriadosPT(+y)[d];if(f)return f;const cfg=club.cfg||{};
+  if(cfg.municipal&&d.slice(5)===cfg.municipal)return 'Feriado municipal';
+  for(const p of (cfg.pausas||[]))if(p.desde&&d>=p.desde&&d<=(p.ate||p.desde))return p.motivo||'Pausa';return null}
+
 /* ---------- Horários e aulas ---------- */
 export function epocaOf(club,d){return club.epocas?.[seasonOf(d)]||null}
 export function slotsOn(club,d){const ep=epocaOf(club,d);if(!ep||d<ep.inicio||(ep.fim&&d>ep.fim))return[];const h=hist(club.horarios,d);if(!h)return[];
   const wd=wdOf(d);return (h.slots||[]).filter(s=>+s.wd===wd).sort((a,b)=>(a.ini||'')<(b.ini||'')?-1:1)}
 export function sessionsBetween(club,stored,from,to){const out={};
-  for(let d=from;d<=to;d=addDays(d,1))for(const s of slotsOn(club,d)){const id=`${d}_${s.t}`;out[id]={id,data:d,turma:s.t,ini:s.ini||'',fim:s.fim||'',tipo:'normal',estado:'prevista',pres:{},virtual:true}}
+  for(let d=from;d<=to;d=addDays(d,1)){const fe=semAulas(club,d);for(const s of slotsOn(club,d)){const id=`${d}_${s.t}`;out[id]={id,data:d,turma:s.t,ini:s.ini||'',fim:s.fim||'',tipo:'normal',estado:fe?'feriado':'prevista',motivo:fe||'',pres:{},virtual:true}}}
   for(const id in stored){const s=stored[id];if(s.data>=from&&s.data<=to)out[id]={...(out[id]||{}),...s,id,virtual:false}}
   return Object.values(out).sort((a,b)=>a.data!==b.data?(a.data<b.data?-1:1):(a.ini||'')!==(b.ini||'')?((a.ini||'')<(b.ini||'')?-1:1):(a.turma<b.turma?-1:1))}
 export const isGiven=s=>s&&!s.virtual&&s.estado==='dada';

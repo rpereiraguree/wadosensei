@@ -54,7 +54,7 @@ label.mini{margin:0;font-size:11px;flex:1;min-width:0}label.mini input,label.min
 .chip.on{background:var(--accent);border-color:var(--accent);color:var(--onaccent)}
 .list{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:12px}
 .li{display:flex;align-items:center;gap:10px;padding:11px 12px;border-top:1px solid var(--line)}
-.li:first-child{border-top:0}.li[data-a]{cursor:pointer}
+.li:first-child{border-top:0}.li[data-a]{cursor:pointer}.li.ev{background:var(--warnbg)}
 .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gh{padding:8px 12px;font-size:12px;font-weight:700;color:var(--muted);background:var(--chip);text-transform:uppercase;letter-spacing:.5px}
 .tag{font-size:12px;font-weight:600;padding:3px 8px;border-radius:999px;white-space:nowrap;border:0}
@@ -104,6 +104,14 @@ ol{padding-left:18px}
   #print th,#print td{border:1px solid #bbb;padding:3px 5px;text-align:center}
   #print th{background:#f2f2f2;font-size:10px}#print th small{font-weight:400;color:#555;font-size:8px}
   #print td.pn{text-align:left;font-weight:700;white-space:nowrap}
+  #print .mp{font:12px/1.35 Arial,sans-serif;padding:6mm 10mm}
+  #print .mp h1{font-size:19px;text-align:center;margin:0 0 6px}#print .mp h3{text-align:center;font-size:13px;margin:0 0 10px}
+  #print .mp table{border-collapse:collapse;width:100%;margin-bottom:18px}#print .mp th,#print .mp td{border:1px solid #333;padding:3px 6px;text-align:left;font-weight:400;background:none;font-size:12px}
+  #print .mp th{font-size:13px}#print .mp .mc{vertical-align:middle}
+  #print .mp .rp{background:#4a90d9!important;color:#fff}#print .mp .ev{background:#fff59d!important}
+  #print .mp .box td:first-child{width:50%}
+  #print .mp .fr{margin-top:22px}#print .mp blockquote{font-size:26px;line-height:1.25;margin:10px 0 8px}#print .mp .au{text-align:right;font-size:14px}
+  #print *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   #print td b{font-size:12px}#print .pv{color:#666}#print .up{color:#15803d;font-weight:700}#print .down{color:#b91c1c;font-weight:700}
 }
 </style>
