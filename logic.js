@@ -49,10 +49,15 @@ export function suggestCode(club,stored,s){const k=seasonOf(s.data);
   const t=(club.turmas||[]).find(t=>t.id===s.turma);return `${t?.pre||s.turma}-S${pad(weekNo(club,s.data))}A${pad(n+1)}`}
 
 /* ---------- Assiduidade ---------- */
-export function attStats(stored,from,to,w=0.2){const o={};
-  for(const s of Object.values(stored)){if(!isGiven(s)||s.data<from||s.data>to)continue;const rep=s.tipo==='reposicao'||s.tipo==='extra';
-    for(const id in (s.pres||{})){const v=s.pres[id];if(!['P','F','J'].includes(v))continue;if(rep&&v!=='P')continue;const x=o[id]||(o[id]={P:0,F:0,J:0,hist:[]});x[v]++;x.hist.push([s.data,v])}}
-  for(const id in o){const x=o[id];x.tot=x.P+x.F+x.J;x.pct=x.tot?(x.P+w*x.J)/x.tot:null;x.hist.sort((a,b)=>a[0]<b[0]?-1:1)}return o}
+// Assiduidade relativa às aulas a que cada atleta tem direito (frequência 1×/2× por semana).
+// previstas = soma, por cada aula normal dada à turma, de min(1, frequência / aulas semanais da turma)
+// assiduidade = (presenças + peso×justificadas) / previstas  (reposições só somam presenças; máx. 100%)
+export function slotsPerWeek(club,t,d){const h=hist(club.horarios,d);return (h?.slots||[]).filter(s=>s.t===t).length||1}
+export function attStats(club,ctx,from,to,w=0.2){const o={};const get=id=>o[id]||(o[id]={P:0,F:0,J:0,exp:0,hist:[]});
+  for(const s of Object.values(ctx.sessions||{})){if(!isGiven(s)||s.data<from||s.data>to)continue;const rep=s.tipo!=='normal';const k=seasonOf(s.data),m=s.data.slice(0,7);
+    for(const id in (s.pres||{})){const v=s.pres[id];if(!['P','F','J'].includes(v))continue;if(rep&&v!=='P')continue;const x=get(id);x[v]++;x.hist.push([s.data,v])}
+    if(!rep){const spw=slotsPerWeek(club,s.turma,s.data);for(const a of Object.values(ctx.athletes||{})){const e=enr(a,k);if(!e||e.turma!==s.turma||!activeIn(a,k,m))continue;get(a.id).exp+=Math.min(1,freqAt(e,m)/spw)}}}
+  for(const id in o){const x=o[id];x.tot=x.P+x.F+x.J;const att=x.P+w*x.J;x.pct=x.exp>0?Math.min(1,att/x.exp):(x.tot?att/x.tot:null);x.hist.sort((a,b)=>a[0]<b[0]?-1:1)}return o}
 export function monthPres(stored){const o={};for(const s of Object.values(stored)){if(!isGiven(s))continue;const m=s.data.slice(0,7);for(const id in (s.pres||{}))if(s.pres[id]==='P')(o[m]||(o[m]={}))[id]=true}return o}
 
 /* ---------- Inscrições e mensalidades ---------- */
@@ -114,7 +119,7 @@ export const TRIM=[['T1','1.º trimestre','09-01','12-31',0],['T2','2.º trimest
 export function trimRange(k,t){if(t==='E')return seasonRange(k);const x=TRIM.find(z=>z[0]===t);const y=+k+x[4];return{from:`${y}-${x[2]}`,to:`${y}-${x[3]}`}}
 export function assidPts(meta,pct){if(pct==null)return 0;const tiers=[...(meta?.assidTiers||[])].sort((a,b)=>b.min-a.min);for(const t of tiers)if(pct*100>=+t.min)return +t.pts;return 0}
 export function pointsTable(club,ctx,meta,k,t){const w=+club.cfg?.pesoJ||0.2;const per=t==='E'?TRIM.map(x=>trimRange(k,x[0])):[trimRange(k,t)];const R=trimRange(k,t);
-  const stP=per.map(r=>attStats(ctx.sessions,r.from,r.to,w));const stR=attStats(ctx.sessions,R.from,R.to,w);const o={};
+  const stP=per.map(r=>attStats(club,ctx,r.from,r.to,w));const stR=attStats(club,ctx,R.from,R.to,w);const o={};
   for(const a of Object.values(ctx.athletes)){const e=enr(a,k);if(!e)continue;
     const as=stP.reduce((s,st)=>s+assidPts(meta,st[a.id]?.pct??null),0);
     const prem=Object.values(ctx.awards||{}).filter(x=>x.ath===a.id&&x.data>=R.from&&x.data<=R.to).reduce((s,x)=>s+(+x.pts||0),0);

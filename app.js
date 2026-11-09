@@ -10,7 +10,7 @@ const uid=()=>Math.random().toString(36).slice(2,8)+Date.now().toString(36).slic
 const copy=o=>JSON.parse(JSON.stringify(o));
 const {today,fmtD,eur,mShort,mLabel,DOW,DOWL,seasonLabel,nameOf}=L;
 const pref=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem('ws_'+k)||'null');localStorage.setItem('ws_'+k,JSON.stringify(v))}catch(e){return null}};
-const UI={tab:'hoje',club:pref('club'),season:pref('season')||{},aul:{m:null,t:''},ath:{f:'ins',q:''},con:{v:null,m:null,qa:null,qv:'quotas'},pre:{t:null},sheetLive:null,draft:null,sw:{mode:'ind',t0:0,run:false,ath:null}};
+const QS=new URLSearchParams(location.search);const UI={tab:['hoje','aulas','atletas','contas','mais'].includes(QS.get('tab'))?QS.get('tab'):'hoje',club:pref('club'),season:pref('season')||{},aul:{m:null,t:''},ath:{f:'ins',q:''},con:{v:null,m:null,qa:null,qv:'quotas'},pre:{t:null},sheetLive:null,draft:null,sw:{mode:'ind',t0:0,run:false,ath:null}};
 
 /* ---------- acesso a dados ---------- */
 const CL=()=>DB.clubs[UI.club];
@@ -34,7 +34,7 @@ function sendMsg(ath,text){const link=L.msgLink(ath?.tel,ath?.canal,text);if(lin
 
 /* ---------- arranque ---------- */
 function onData(){_ctx=null;if(UI.club&&!DB.clubs[UI.club])UI.club=null;if(!UI.club){const ids=Object.keys(DB.clubs).filter(id=>DB.clubs[id].doc);if(ids.length)UI.club=ids.includes('cart')?'cart':ids[0]}
-  render();refreshSheet()}
+  render();refreshSheet();if(QS.get('repo')&&CL()?.doc&&!UI.repoDone){UI.repoDone=true;repoDraft(null,false)}}
 function refreshSheet(){if(!UI.sheetLive||$('#sheet').classList.contains('hidden'))return;const ae=document.activeElement;
   if(ae&&$('#sheetBody').contains(ae)&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName)){UI.deferSheet=true;return}UI.deferSheet=false;const b=$('#sheetBody'),sc=b.scrollTop;UI.sheetLive();b.scrollTop=sc}
 document.addEventListener('focusout',()=>setTimeout(()=>{if(UI.deferSheet)refreshSheet()},60));
@@ -49,10 +49,10 @@ const TABS=[['hoje','Hoje','<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9
 const MAIS_SUB=['premios','testes','aniv','config','geral','dados'];
 function render(){
   const hdr=$('#hdr'),nav=$('#tabs'),view=$('#view');
-  if(!DB.authReady){hdr.innerHTML='<h1>wadosensei</h1>';nav.innerHTML='';view.innerHTML='<div class="empty">A carregar…</div>';return}
-  if(!DB.user){hdr.innerHTML='<h1>wadosensei</h1>';nav.innerHTML='';view.innerHTML=`<div class="login"><img src="icon-192.png" alt="" width="96" height="96"><h2>wadosensei</h2><p class="muted">Gestão dos clubes de karaté</p><button class="btn" data-a="login">Entrar com Google</button></div>`;return}
-  if(!DB.metaLoaded||!DB.clubsLoaded){hdr.innerHTML='<h1>wadosensei</h1>';nav.innerHTML='';view.innerHTML=`<div class="empty">A carregar dados…${DB.error?'<br><br>'+esc(DB.error):''}</div>`;return}
-  if(!UI.club||!CL()?.doc){hdr.innerHTML='<h1>wadosensei</h1>';nav.innerHTML='';view.innerHTML=V.welcome();return}
+  if(!DB.authReady){hdr.innerHTML='<h1>Wado Sensei</h1>';nav.innerHTML='';view.innerHTML='<div class="empty">A carregar…</div>';return}
+  if(!DB.user){hdr.innerHTML='<h1>Wado Sensei</h1>';nav.innerHTML='';view.innerHTML=`<div class="login"><img src="icon-192.png" alt="" width="96" height="96"><h2>Wado Sensei</h2><p class="muted">Gestão dos clubes de karaté</p><button class="btn" data-a="login">Entrar com Google</button></div>`;return}
+  if(!DB.metaLoaded||!DB.clubsLoaded){hdr.innerHTML='<h1>Wado Sensei</h1>';nav.innerHTML='';view.innerHTML=`<div class="empty">A carregar dados…${DB.error?'<br><br>'+esc(DB.error):''}</div>`;return}
+  if(!UI.club||!CL()?.doc){hdr.innerHTML='<h1>Wado Sensei</h1>';nav.innerHTML='';view.innerHTML=V.welcome();return}
   const k=K();const sync=!navigator.onLine?'<span class="sync off" title="Sem rede — grava quando voltar">offline</span>':DB.pending?'<span class="sync">a gravar…</span>':'';
   hdr.innerHTML=`<select data-c="club" aria-label="Clube" class="clubsel">${Object.values(DB.clubs).filter(c=>c.doc).map(c=>`<option value="${c.doc.id}" ${c.doc.id===UI.club?'selected':''}>${esc(c.doc.nome)}</option>`).join('')}<option value="__new">+ Novo clube…</option></select>${sync}
     <select data-c="season" aria-label="Época">${Object.keys(CD().epocas||{}).sort().map(s=>`<option value="${s}" ${s===k?'selected':''}>${seasonLabel(s)}</option>`).join('')}</select>`;
@@ -64,7 +64,7 @@ const V={};
 const empty=t=>`<div class="empty">${t}</div>`;
 const back=t=>`<div class="ch"><button class="btn sm ghost" data-a="tab" data-t="mais">‹ Mais</button><h2 style="margin:0">${t}</h2><span></span></div>`;
 
-V.welcome=()=>`<div class="card"><h2>Bem-vindo, Sensei</h2><p>Ainda não há clubes nesta conta. Posso criar já os dois clubes com tudo o que definimos: horários, turmas, valores, descontos e os dados da época 25/26 do Cart (atletas, presenças e mensalidades de janeiro a junho).</p>
+V.welcome=()=>`<div class="card"><h2>Bem-vindo, Sensei</h2><p>Ainda não há clubes nesta conta. Posso criar já os dois clubes com tudo o que definimos: horários, turmas, valores e descontos.</p><p class="sm">Depois importa os atletas e o histórico de 25/26 em <b>Mais → Dados e backup → Importar backup</b>, com o ficheiro <b>cart-2025-26.json</b> (guardado só contigo, nunca no GitHub).</p>
   <button class="btn block" data-a="seedAll">Criar Cart Wado Karaté + Flexgym</button><button class="btn ghost block" data-a="newClub">Começar com um clube vazio</button>
   <p class="muted sm" style="margin-top:12px">Sessão: ${esc(DB.user.email)} · <a href="#" data-a="logout">sair</a></p></div>`;
 
@@ -93,7 +93,7 @@ V.hoje=()=>{const cd=CD(),k=K(),t=today(),cx=ctx();let h='';
   else{const pm=L.addMonths(t.slice(0,7),-1);if((cd.epocas?.[k]?.meses||[]).includes(pm)&&!cx.receitas[pm])al.push(`<div class="srow"><div class="grow"><b>Remuneração de ${L.MESES[+pm.slice(5)-1].toLowerCase()} por registar</b><div class="muted sm">Previsto ${eur(L.profMonth(cd,cx,k,pm).prev)}</div></div><button class="btn sm ghost" data-a="goContas" data-v="rem">Registar</button></div>`)}
   const ms=L.moneySummary(META(),cx,t);if(ms.falta||ms.mao)al.push(`<div class="srow"><div class="grow"><b>Quotas e taxas</b><div class="muted sm">Por cobrar ${eur(ms.falta)} · Em mão (para entregar) ${eur(ms.mao)}</div></div><button class="btn sm ghost" data-a="goContas" data-v="quotas">Ver</button></div>`);
   const Y=t.slice(0,4);if(+t.slice(5,7)<=3&&ins.length&&!Object.values(cx.fees).some(f=>f.ano===Y))al.push(`<div class="srow"><div class="grow"><b>Quotas de ${Y} ainda não geradas</b><div class="muted sm">Federação, associação e seguro para os atletas inscritos.</div></div><button class="btn sm" data-a="genQuotas" data-y="${Y}">Gerar</button></div>`);
-  const st=L.attStats(cx.sessions,L.seasonRange(k).from,L.seasonRange(k).to,+cd.cfg?.pesoJ||0.2);
+  const st=L.attStats(cd,cx,L.seasonRange(k).from,L.seasonRange(k).to,+cd.cfg?.pesoJ||0.2);
   const low=ins.filter(a=>{const x=st[a.id];if(!x)return false;const r=x.hist.slice(-6);return r.length>=4&&r.filter(z=>z[1]!=='F').length/r.length<.5});
   if(low.length)al.push(`<div class="srow"><div class="grow"><b>Assiduidade baixa nas últimas aulas</b><div class="muted sm">${low.map(nameOf).join(', ')}</div></div></div>`);
   if(!ins.length)al.push(`<div class="srow"><div class="grow"><b>Época ${seasonLabel(k)} sem atletas inscritos</b><div class="muted sm">Inscreve quem continua e adiciona os novos.</div></div><button class="btn sm" data-a="goInscrever">Inscrever</button></div>`);
@@ -112,7 +112,7 @@ V.aulas=()=>{const k=K(),ep=CD().epocas[k]||{};const months=[];if(ep.inicio){let
   h+=`<button class="btn ghost block" data-a="newExtra">+ Aula extra</button>`;return h};
 
 function openSess(id){const st=CL().sessions[id];let v=null;if(!st){const[d,t]=id.split('_');v=sessionsOn(d).find(s=>s.id===id);if(!v)return}
-  UI.sess={id,v};UI.sheetLive=renderSess;renderSess()}
+  UI.sess={id,v,aw:null};UI.sheetLive=renderSess;renderSess()}
 function getSess(){const st=CL().sessions[UI.sess.id];return st?{...copy(st),id:UI.sess.id,virtual:false}:copy(UI.sess.v)}
 function saveSess(s){const d={...s,id:UI.sess.id};delete d.virtual;put('sessions',UI.sess.id,d)}
 function renderSess(){const s=getSess(),cd=CD(),k=L.seasonOf(s.data),t=turma(s.turma),wd=L.wdOf(s.data),m=s.data.slice(0,7);
@@ -130,10 +130,13 @@ function renderSess(){const s=getSess(),cd=CD(),k=L.seasonOf(s.data),t=turma(s.t
     const exp=rep?[...all,...extra]:[...all.filter(a=>(L.enr(a,k).dias||[]).includes(wd)||pres[a.id]),...extra];const others=rep?[]:all.filter(a=>!exp.includes(a));
     const P=Object.values(pres).filter(v=>v==='P').length;
     h+=`<div class="ch" style="margin-top:14px"><h3>Presenças · ${P}</h3>${rep?'':'<button class="btn sm ghost" data-a="allP">Todos P</button>'}</div>`;
-    const row=a=>{const v=pres[a.id]||'';return `<div class="li"><div class="grow nm">${esc(nameOf(a))}</div><div class="pfj">${(rep?['P']:['P','F','J']).map(x=>`<button class="m ${x} ${v===x?'on':''}" data-a="mark" data-id="${a.id}" data-s="${x}">${x}</button>`).join('')}</div></div>`};
+    const awS=Object.values(ctx().awards||{}).filter(x=>x.sess===s.id);const types=META().awardTypes||[];
+    const row=a=>{const v=pres[a.id]||'';const mine=awS.filter(x=>x.ath===a.id);const pts=mine.reduce((t,x)=>t+(+x.pts||0),0);const op=UI.sess.aw===a.id;
+      const awr=op?`<div class="awrow">${types.map(t=>`<button class="chip" data-a="sessAwAdd" data-id="${a.id}" data-t="${t.id}">${esc(t.nome)} +${t.pts}</button>`).join('')}${mine.map(x=>`<button class="chip on" data-a="sessAwDel" data-id="${x.id}">${esc(x.nome)} +${x.pts} ✕</button>`).join('')}</div>`:'';
+      return `<div class="li"><div class="grow nm">${esc(nameOf(a))}${pts?` <span class="tag t-blue">+${pts}</span>`:''}</div><button class="star ${op?'on':''}" data-a="sessAw" data-id="${a.id}" aria-label="Prémio">★</button><div class="pfj">${(rep?['P']:['P','F','J']).map(x=>`<button class="m ${x} ${v===x?'on':''}" data-a="mark" data-id="${a.id}" data-s="${x}">${x}</button>`).join('')}</div></div>${awr}`};
     h+=exp.length?`<div class="list">${exp.map(row).join('')}</div>`:empty('Ninguém inscrito nesta turma.');
     if(others.length)h+=`<details><summary>Outros da turma (${others.length})</summary><div class="list">${others.map(row).join('')}</div></details>`;
-    h+=`<p class="muted sm">${rep?'Na reposição só se registam presenças — quem não vem não leva falta.':'P presente · F falta · J justificada. Toca de novo para limpar.'}</p>`}
+    h+=`<p class="muted sm">${rep?'Na reposição só se registam presenças — quem não vem não leva falta.':'P presente · F falta · J justificada. Toca de novo para limpar. ★ atribui pontos extra (comportamento, desempenho…).'}</p>`}
   if(!s.virtual)h+=`<button class="btn danger block" data-a="sessDel">${rep?'Apagar esta aula':'Limpar registo desta aula'}</button>`;
   openSheet(h)}
 
@@ -152,7 +155,7 @@ function renderRepo(){const d=UI.draft,cd=CD();const pend=L.pendingCancelled(CL(
 /* ---------- ATLETAS ---------- */
 V.atletas=()=>{const u=UI.ath;return `<div class="row gap"><input placeholder="Procurar nome ou nº FNKP" value="${esc(u.q)}" data-i="athQ"><button class="btn" data-a="newAth">+ Novo</button></div>
   <div class="chips">${[['ins','Inscritos '+seasonLabel(K())],['out','Não inscritos'],['all','Todos']].map(([v,l])=>`<button class="chip ${u.f===v?'on':''}" data-a="athF" data-f="${v}">${l}</button>`).join('')}<button class="chip" data-a="importList">Importar lista</button></div><div id="athList">${athList()}</div>`};
-function athList(){const u=UI.ath,k=K(),cd=CD(),q=u.q.trim().toLowerCase(),m=curMonth(k),cx=ctx();const st=L.attStats(cx.sessions,L.seasonRange(k).from,L.seasonRange(k).to,+cd.cfg?.pesoJ||0.2);
+function athList(){const u=UI.ath,k=K(),cd=CD(),q=u.q.trim().toLowerCase(),m=curMonth(k),cx=ctx();const st=L.attStats(cd,cx,L.seasonRange(k).from,L.seasonRange(k).to,+cd.cfg?.pesoJ||0.2);
   let as=Object.values(cx.athletes).filter(a=>{const e=L.enr(a,k);if(u.f==='ins'&&!e)return false;if(u.f==='out'&&e)return false;return !q||a.nome.toLowerCase().includes(q)||(a.curto||'').toLowerCase().includes(q)||String(a.fnkp||'').includes(q)}).sort((a,b)=>nameOf(a).localeCompare(nameOf(b)));
   if(!as.length)return empty(u.f==='ins'?'Ainda ninguém inscrito nesta época. Abre "Não inscritos" para inscrever quem continua, ou adiciona novos.':'Sem resultados.');
   const row=a=>{const e=L.enr(a,k);const x=st[a.id];const ag=a.nasc?L.ageAt(a.nasc,today()):null;
@@ -196,7 +199,7 @@ function renderAth(){const{a,isNew}=UI.draft,k=K(),cd=CD(),cx=ctx(),M=META(),e=a
   h+='</div>';
   if(!isNew&&cx.athletes[a.id]){const fees=Object.values(cx.fees).filter(f=>f.ath===a.id).sort((x,y)=>x.ano<y.ano?1:-1);const evs=Object.values(cx.events).filter(ev=>ev.atl?.[a.id]).sort((x,y)=>x.data<y.data?1:-1);
     if(fees.length||evs.length)h+=`<div class="card"><h3>Quotas e taxas</h3>${fees.map(f=>`<div class="srow"><span>${L.QITEMS.find(q=>q[0]===f.item)[1]} ${f.ano}${f.red?' (red.)':''}</span><span>${eur(L.feeValue(M,f,a,today()))}</span>${feeTag(f.estado)}</div>`).join('')}${evs.map(ev=>`<div class="srow"><span>${esc(ev.nome)} · ${fmtD(ev.data)}${ev.atl[a.id].grau?' · '+esc(ev.atl[a.id].grau):''}</span><span>${eur(ev.atl[a.id].v??ev.valor)}</span>${feeTag(ev.atl[a.id].estado)}</div>`).join('')}</div>`;
-    const pts=L.pointsTable(cd,cx,M,k,'E')[a.id];const rows=Object.keys(cd.epocas).sort().reverse().map(sk=>{const r=L.seasonRange(sk);const x=L.attStats(cx.sessions,r.from,r.to,+cd.cfg?.pesoJ||0.2)[a.id];return x?`<div class="srow"><span>${seasonLabel(sk)}</span><span class="muted sm">${x.P} P · ${x.F} F · ${x.J} J</span><b>${Math.round(x.pct*100)}%</b></div>`:''}).join('');
+    const pts=L.pointsTable(cd,cx,M,k,'E')[a.id];const rows=Object.keys(cd.epocas).sort().reverse().map(sk=>{const r=L.seasonRange(sk);const x=L.attStats(cd,cx,r.from,r.to,+cd.cfg?.pesoJ||0.2)[a.id];return x?`<div class="srow"><span>${seasonLabel(sk)}</span><span class="muted sm">${x.P} P · ${x.J} J de ${L.fmtNum(x.exp,x.exp%1?1:0)} previstas</span><b>${Math.round(x.pct*100)}%</b></div>`:''}).join('');
     h+=`<div class="card"><h3>Assiduidade e pontos</h3>${rows||'<div class="muted sm">Sem registos.</div>'}${pts?`<div class="srow"><span>Pontos ${seasonLabel(k)}</span><span class="muted sm">assid. ${pts.assid} · prémios ${pts.prem} · eventos ${pts.ev}</span><b>${pts.tot}</b></div>`:''}</div>`;
     const charts=(M.tests||[]).map(t=>{const hs=L.testHistory(cx.tests,a.id,t.id).map(x=>({d:x.data,v:L.bestOf(t,x.r)})).filter(x=>x.v!=null);return hs.length?`<div class="tchart"><div class="sm"><b>${esc(t.nome)}</b> <span class="muted">${esc(t.un)}</span></div>${spark(hs,t)}</div>`:''}).join('');
     if(charts)h+=`<div class="card"><h3>Testes físicos</h3>${charts}</div>`}
@@ -409,7 +412,7 @@ const A={
   sheetBg:(d,el,e)=>{if(e.target.id==='sheet')closeSheet()},
   seedAll:async(d,el)=>{el.disabled=true;el.textContent='A criar…';const S=seedClubs();const ops=[{meta:true,data:seedMeta()}];
     for(const cid in S){const c=S[cid];ops.push({cid,data:c.doc});for(const col of ['athletes','sessions','payments'])for(const id in (c[col]||{}))ops.push({cid,col,id,data:c[col][id]})}
-    try{await api().bulk(ops);UI.club='cart';pref('club','cart');toast('Clubes criados')}catch(e){alert('Erro: '+e.message);el.disabled=false}},
+    try{await api().bulk(ops);UI.club='cart';pref('club','cart');UI.tab='dados';toast('Clubes criados — agora importa o ficheiro cart-2025-26.json')}catch(e){alert('Erro: '+e.message);el.disabled=false}},
   newClub:()=>{const n=prompt('Nome do clube');if(!n||!n.trim())return;const id='c'+uid();const k=L.seasonOf(today());const pre=n.trim().slice(0,1).toUpperCase();
     if(!DB.meta)api().putMeta(seedMeta());
     api().put(id,null,null,{id,nome:n.trim(),modelo:'gestao',turmas:[{id:'C',nome:'Crianças',pre:pre+'C'},{id:'A',nome:'Adultos',pre:pre+'A'}],horarios:[{desde:`${k}-09-01`,slots:[]}],
@@ -420,6 +423,9 @@ const A={
   openSess:d=>openSess(d.id),
   sessEst:d=>{const s=getSess();if(s.estado===d.v)s.estado='prevista';else{s.estado=d.v;if(d.v==='cancelada')s.pres={};if(d.v==='dada'&&!s.plano)s.plano=L.suggestCode(CD(),CL().sessions,s)}
     if(s.estado==='prevista'&&!Object.keys(s.pres||{}).length&&!s.plano&&!s.nota&&s.tipo==='normal'){del('sessions',s.id);UI.sess.v={...s,virtual:true};renderSess();return}saveSess(s)},
+  sessAw:d=>{UI.sess.aw=UI.sess.aw===d.id?null:d.id;renderSess()},
+  sessAwAdd:d=>{const s=getSess();const t=(META().awardTypes||[]).find(x=>x.id===d.t);if(!t)return;const id='w'+uid();put('awards',id,{id,ath:d.id,tipo:t.id,nome:t.nome,pts:+t.pts||0,data:s.data,sess:s.id,nota:''});toast(`${N(d.id)}: ${t.nome} +${t.pts}`)},
+  sessAwDel:d=>{del('awards',d.id)},
   sessSug:()=>{const s=getSess();s.plano=L.suggestCode(CD(),CL().sessions,s);if(s.estado!=='dada')s.estado='dada';saveSess(s)},
   mark:d=>{const s=getSess();s.pres=s.pres||{};if(s.pres[d.id]===d.s)delete s.pres[d.id];else s.pres[d.id]=d.s;if(Object.keys(s.pres).length&&s.estado!=='dada'){s.estado='dada'}if(s.estado==='dada'&&!s.plano)s.plano=L.suggestCode(CD(),CL().sessions,s);saveSess(s)},
   allP:()=>{const s=getSess(),k=L.seasonOf(s.data),wd=L.wdOf(s.data);s.pres=s.pres||{};athsIn(k,s.turma,s.data.slice(0,7)).filter(a=>(L.enr(a,k).dias||[]).includes(wd)).forEach(a=>{if(!s.pres[a.id])s.pres[a.id]='P'});s.estado='dada';if(!s.plano)s.plano=L.suggestCode(CD(),CL().sessions,s);saveSess(s)},
