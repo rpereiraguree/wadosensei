@@ -1,0 +1,12 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Só a conta do Rodrigo pode ler e escrever, e apenas na sua própria pasta.
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.email == 'r.pereira.guree@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+  }
+}
