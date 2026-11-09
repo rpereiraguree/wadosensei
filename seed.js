@@ -28,5 +28,5 @@ export function seedClubs(){
   const flex={id:'flexgym',nome:'Flexgym',modelo:'professor',turmas:turmas('G'),
     horarios:[{desde:'2026-10-02',slots:[{t:'C',wd:2,ini:'18:30',fim:'19:30'},{t:'C',wd:5,ini:'18:30',fim:'19:30'},{t:'A',wd:5,ini:'18:30',fim:'20:00'}]}],
     epocas:{'2026':{inicio:'2026-10-02',fim:'2027-07-31',meses:months('2026-10',10),poupInicial:0}},
-    cfg:{valorAluno:14,valorAula:13,modeloPag:'aluno',pesoJ:0.2,local:'FlexGym',pausas:[]},icsExp:[]};
+    cfg:{valorAluno:14,valorAula:13,modeloPag:'aluno',pesoJ:0.2,local:'FlexGym',municipal:'06-24',pausas:[]},icsExp:[]};
   return{cart:{doc:cart},flexgym:{doc:flex}}}
