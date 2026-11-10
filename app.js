@@ -1,6 +1,6 @@
-import * as L from './logic.js?v=19';
-import {DB,init,api} from './store.js?v=19';
-import {seedClubs,seedMeta} from './seed.js?v=19';
+import * as L from './logic.js?v=21';
+import {DB,init,api} from './store.js?v=21';
+import {seedClubs,seedMeta} from './seed.js?v=21';
 
 const FIREBASE={apiKey:"AIzaSyC6LSMa62K2QOfQNqyJaK4n9uU8_ZbcvUA",authDomain:"wadosensei.firebaseapp.com",projectId:"wadosensei",storageBucket:"wadosensei.firebasestorage.app",messagingSenderId:"613268049409",appId:"1:613268049409:web:cbb2bd7de5f88e1bbcba00"};
 const DEMO=new URLSearchParams(location.search).has('demo');
@@ -442,19 +442,20 @@ function renderAward(){const d=UI.draft,M=META(),k=K();const as=athsIn(k,d.turma
   <button class="btn block" data-a="saveAward">Atribuir a ${Object.keys(d.sel).filter(x=>d.sel[x]).length} atleta(s)</button>`)}
 
 /* ---------- TESTES ---------- */
+const tRange=s=>s.ate&&s.ate!==s.data?(s.data.slice(0,4)===s.ate.slice(0,4)?fmtD(s.data).slice(0,5):fmtD(s.data))+' a '+fmtD(s.ate):fmtD(s.data);
 V.testes=()=>{const cx=ctx();const ss=Object.values(cx.tests).sort((a,b)=>a.data<b.data?1:-1);const M=META();
-  return `<button class="btn block" data-a="newTest">+ Sessão de testes</button>`+(ss.length?`<div class="list" style="margin-top:12px">${ss.map(s=>{const n=Object.keys(s.res||{}).length;return `<div class="li" data-a="openTest" data-id="${s.id}"><div class="grow"><div class="nm">${fmtD(s.data)} · ${(s.turmas||[]).map(t=>turma(t).nome).join(' + ')}</div><div class="muted sm">${(s.testes||[]).map(id=>M.tests.find(t=>t.id===id)?.nome||id).join(', ')}</div></div><span class="tag t-mut">${n} atl.</span></div>`}).join('')}</div>`:empty('Sem sessões de testes.'))};
+  return `<button class="btn block" data-a="newTest">+ Sessão de testes</button>`+(ss.length?`<div class="list" style="margin-top:12px">${ss.map(s=>{const n=Object.keys(s.res||{}).length;return `<div class="li" data-a="openTest" data-id="${s.id}"><div class="grow"><div class="nm">${tRange(s)} · ${(s.turmas||[]).map(t=>turma(t).nome).join(' + ')}</div><div class="muted sm">${(s.testes||[]).map(id=>M.tests.find(t=>t.id===id)?.nome||id).join(', ')}</div></div><span class="tag t-mut">${s.fechada?'🔒 ':''}${n} atl.</span></div>`}).join('')}</div>`:empty('Sem sessões de testes.'))};
 function newTest(){const M=META();const id='t'+uid();const s={id,data:today(),turmas:CD().turmas.map(t=>t.id),testes:M.tests.map(t=>t.id),tent:Object.fromEntries(M.tests.map(t=>[t.id,+t.tent||1])),res:{}};put('tests',id,s);openTest(id)}
 function openTest(id){UI.tst={id,test:null};UI.sheetLive=renderTest;renderTest()}
 function renderTest(){const s=ctx().tests[UI.tst.id];if(!s){closeSheet();return}const M=META(),k=L.seasonOf(s.data);const tests=(s.testes||[]).map(id=>M.tests.find(t=>t.id===id)).filter(Boolean);
-  if(!UI.tst.test||!tests.find(t=>t.id===UI.tst.test))UI.tst.test=tests[0]?.id;const T=tests.find(t=>t.id===UI.tst.test);
-  let h=shH('Testes físicos')+`<div class="grid2"><div><label>Data</label><input type="date" value="${s.data}" data-c="tsF" data-k="data"></div><div><label>&nbsp;</label><button class="btn ghost" style="width:100%" data-a="printTest">🖨 Imprimir A4</button></div></div>
-   <label>Turmas</label><div class="chips">${CD().turmas.map(t=>`<button class="chip ${(s.turmas||[]).includes(t.id)?'on':''}" data-a="tsTurma" data-t="${t.id}">${esc(t.nome)}</button>`).join('')}</div>
-   <label>Testes</label><div class="chips">${M.tests.map(t=>`<button class="chip ${(s.testes||[]).includes(t.id)?'on':''}" data-a="tsTeste" data-id="${t.id}">${esc(t.nome)}</button>`).join('')}</div>`;
+  if(!UI.tst.test||!tests.find(t=>t.id===UI.tst.test))UI.tst.test=tests[0]?.id;const T=tests.find(t=>t.id===UI.tst.test);const lk=!!s.fechada;if(lk)UI.sw.run=false;const dis=lk?'disabled':'';
+  let h=shH('Testes físicos')+(lk?`<div class="lockbar"><div class="grow"><b>🔒 Sessão fechada</b><div class="muted sm">Fechada a ${fmtD(s.fechada)} · só consulta</div></div><button class="btn sm ghost" data-a="tsLock" data-v="0">Reabrir</button></div>`:'')+`<div class="grid2"><div><label>De</label><input type="date" value="${s.data}" data-c="tsF" data-k="data" ${dis}></div><div><label>Até</label><input type="date" value="${s.ate||''}" min="${s.data}" data-c="tsF" data-k="ate" ${dis}></div></div>${lk?'':'<p class="muted sm" style="margin:4px 0 8px">Os testes podem decorrer em várias aulas, entre estas datas.</p>'}<button class="btn ghost block" data-a="printTest">🖨 Imprimir A4</button>
+   <label>Turmas</label><div class="chips">${CD().turmas.map(t=>`<button class="chip ${(s.turmas||[]).includes(t.id)?'on':''}" data-a="tsTurma" data-t="${t.id}" ${dis}>${esc(t.nome)}</button>`).join('')}</div>
+   <label>Testes</label><div class="chips">${M.tests.map(t=>`<button class="chip ${(s.testes||[]).includes(t.id)?'on':''}" data-a="tsTeste" data-id="${t.id}" ${dis}>${esc(t.nome)}</button>`).join('')}</div>`;
   if(!T){openSheet(h+empty('Escolhe pelo menos um teste.'));return}
   h+=`<div class="seg" style="margin-top:14px">${tests.map(t=>`<button class="${t.id===T.id?'on':''}" data-a="tsTab" data-id="${t.id}">${esc(t.nome.split(' ').slice(0,2).join(' '))}</button>`).join('')}</div>
    <p class="muted sm">${esc(T.prot||'')} · ${esc(T.un)} · ${T.melhor==='min'?'menor é melhor':'maior é melhor'} · ${T.tent||1} tentativa(s), conta a melhor</p>`;
-  const crono=T.crono||T.un==='s';const sw=UI.sw;
+  const crono=!lk&&(T.crono||T.un==='s');const sw=UI.sw;
   if(crono)h+=`<div class="sw"><div class="seg" style="margin:0 0 8px">${[['ind','Individual'],['grp','Grupo']].map(([v,l])=>`<button class="${sw.mode===v?'on':''}" data-a="swMode" data-v="${v}">${l}</button>`).join('')}</div>
     <div class="swd" id="swd">${fmtSw(sw.run?(performance.now()-sw.t0)/1000:0)}</div><div class="muted sm" style="text-align:center">${sw.mode==='ind'?(sw.run?`A cronometrar <b>${esc(N(sw.ath))}</b> — toca ⏹ para parar`:'Toca ⏱ ao lado do atleta para começar'):(sw.run?'A correr — toca no nome de quem termina':'')}</div>
     ${sw.mode==='grp'?`<div class="row gap" style="margin-top:8px"><button class="btn grow" data-a="swGo">${sw.run?'Parar':'Iniciar'}</button></div>`:''}</div>`;
@@ -462,15 +463,15 @@ function renderTest(){const s=ctx().tests[UI.tst.id];if(!s){closeSheet();return}
     h+=`<div class="list"><div class="gh">${esc(turma(tid).nome)}</div>${as.map(a=>{const arr=s.res?.[a.id]?.[T.id]||[];const best=L.bestOf(T,arr);const prev=L.prevResult(ctx().tests,T,a.id,s.data,s.id);const imp=L.improved(T,best,prev);
       return `<div class="li tl">${crono&&sw.mode==='grp'?`<button class="nm grow btn ghost sm" style="text-align:left" data-a="swLap" data-id="${a.id}">${esc(nameOf(a))}</button>`:`<div class="grow"><div class="nm">${esc(nameOf(a))}</div>`}
         ${crono&&sw.mode==='grp'?'<div>':''}<div class="muted sm">${prev!=null?'ant. '+L.fmtNum(prev,T.dec):''}${best!=null&&prev!=null?` <b class="${imp>0?'up':imp<0?'down':''}">${imp>0?'▲':imp<0?'▼':'='} ${L.fmtNum(Math.abs(best-prev),T.dec)}</b>`:''}</div></div>
-        <div class="tents">${Array.from({length:T.tent||1},(_,i)=>`<input type="number" step="any" inputmode="decimal" value="${arr[i]??''}" data-c="tsRes" data-id="${a.id}" data-n="${i}" class="tin ${best!=null&&+arr[i]===best?'best':''}">`).join('')}
+        <div class="tents">${Array.from({length:T.tent||1},(_,i)=>`<input type="number" step="any" inputmode="decimal" value="${arr[i]??''}" data-c="tsRes" data-id="${a.id}" data-n="${i}" class="tin ${best!=null&&+arr[i]===best?'best':''}" ${lk?'readonly tabindex="-1" placeholder="—"':''}>`).join('')}
         ${crono&&sw.mode==='ind'?`<button class="btn sm ${sw.run&&sw.ath===a.id?'danger':''}" data-a="swInd" data-id="${a.id}">${sw.run&&sw.ath===a.id?'⏹':'⏱'}</button>`:''}</div></div>`}).join('')}</div>`}
-  h+=`<button class="btn danger block" data-a="delTest">Apagar sessão</button>`;openSheet(h);if(sw.run)tickSw()}
+  h+=lk?'':`<button class="btn block" data-a="tsLock" data-v="1">🔒 Fechar sessão</button><p class="muted sm" style="text-align:center;margin:4px 0 12px">Depois de fechada, os resultados ficam só para consulta.</p><button class="btn danger block" data-a="delTest">Apagar sessão</button>`;openSheet(h);if(sw.run)tickSw()}
 const fmtSw=s=>s.toFixed(2).replace('.',',')+' s';
 function tickSw(){cancelAnimationFrame(tickSw.r);const f=()=>{const el=$('#swd');if(!el||!UI.sw.run)return;el.textContent=fmtSw((performance.now()-UI.sw.t0)/1000);tickSw.r=requestAnimationFrame(f)};tickSw.r=requestAnimationFrame(f)}
-function recordTime(athId,sec){const s=copy(ctx().tests[UI.tst.id]);const T=META().tests.find(t=>t.id===UI.tst.test);s.res=s.res||{};const r=(s.res[athId]=s.res[athId]||{});const arr=(r[T.id]=r[T.id]||[]);
+function recordTime(athId,sec){if(ctx().tests[UI.tst.id]?.fechada)return;const s=copy(ctx().tests[UI.tst.id]);const T=META().tests.find(t=>t.id===UI.tst.test);s.res=s.res||{};const r=(s.res[athId]=s.res[athId]||{});const arr=(r[T.id]=r[T.id]||[]);
   let i=arr.findIndex(x=>x===''||x==null);if(i<0)i=arr.length<(T.tent||1)?arr.length:(T.tent||1)-1;arr[i]=Math.round(sec*100)/100;put('tests',s.id,s);toast(`${N(athId)}: ${fmtSw(sec)}`)}
 function printTest(){const s=ctx().tests[UI.tst.id],M=META(),cd=CD(),k=L.seasonOf(s.data);const tests=(s.testes||[]).map(id=>M.tests.find(t=>t.id===id)).filter(Boolean);
-  let h=`<div class="ph"><div><h1>${esc(cd.nome)} · Testes físicos</h1><div>${DOWL[L.wdOf(s.data)]}, ${fmtD(s.data)}</div></div><div class="leg">resultado · (anterior) · progressão<br><span class="up">▲ melhorou</span> <span class="down">▼ piorou</span></div></div>`;
+  let h=`<div class="ph"><div><h1>${esc(cd.nome)} · Testes físicos</h1><div>${s.ate&&s.ate!==s.data?'De '+fmtD(s.data)+' a '+fmtD(s.ate):DOWL[L.wdOf(s.data)]+', '+fmtD(s.data)}</div></div><div class="leg">resultado · (anterior) · progressão<br><span class="up">▲ melhorou</span> <span class="down">▼ piorou</span></div></div>`;
   for(const tid of (s.turmas||[])){const as=athsIn(k,tid).filter(a=>s.res?.[a.id]);if(!as.length)continue;
     h+=`<h2>${esc(turma(tid).nome)}</h2><table><thead><tr><th>Atleta</th>${tests.map(t=>`<th>${esc(t.nome)}<br><small>${esc(t.un)} · ${t.melhor==='min'?'menor é melhor':'maior é melhor'}</small></th>`).join('')}</tr></thead><tbody>
     ${as.map(a=>`<tr><td class="pn">${esc(nameOf(a))}</td>${tests.map(t=>{const b=L.bestOf(t,s.res[a.id]?.[t.id]);const p=L.prevResult(ctx().tests,t,a.id,s.data,s.id);const im=L.improved(t,b,p);
@@ -737,15 +738,16 @@ const A={
     for(const ath of ids){const id='w'+uid();put('awards',id,{id,ath,tipo:d.tipo,nome:t.nome,pts:+d.pts||0,data:d.data,nota:d.nota})}toast(`+${d.pts} pts a ${ids.length} atleta(s)`);UI.draft=null;closeSheet()},
   delAward:d=>{if(confirm('Remover estes pontos?'))del('awards',d.id)},
   newTest:()=>newTest(),openTest:d=>openTest(d.id),
-  tsTurma:d=>{const s=copy(ctx().tests[UI.tst.id]);s.turmas=s.turmas.includes(d.t)?s.turmas.filter(x=>x!==d.t):[...s.turmas,d.t];put('tests',s.id,s)},
-  tsTeste:d=>{const s=copy(ctx().tests[UI.tst.id]);s.testes=s.testes.includes(d.id)?s.testes.filter(x=>x!==d.id):[...s.testes,d.id];put('tests',s.id,s)},
+  tsTurma:d=>{if(ctx().tests[UI.tst.id]?.fechada)return;const s=copy(ctx().tests[UI.tst.id]);s.turmas=s.turmas.includes(d.t)?s.turmas.filter(x=>x!==d.t):[...s.turmas,d.t];put('tests',s.id,s)},
+  tsTeste:d=>{if(ctx().tests[UI.tst.id]?.fechada)return;const s=copy(ctx().tests[UI.tst.id]);s.testes=s.testes.includes(d.id)?s.testes.filter(x=>x!==d.id):[...s.testes,d.id];put('tests',s.id,s)},
   tsTab:d=>{UI.tst.test=d.id;UI.sw.run=false;renderTest()},
   swMode:d=>{UI.sw.mode=d.v;UI.sw.run=false;renderTest()},
-  swInd:d=>{const sw=UI.sw;if(sw.run&&sw.ath===d.id){const t=(performance.now()-sw.t0)/1000;sw.run=false;recordTime(d.id,t)}else{sw.run=true;sw.ath=d.id;sw.t0=performance.now();renderTest()}},
-  swGo:()=>{const sw=UI.sw;if(sw.run){sw.run=false}else{sw.run=true;sw.t0=performance.now()}renderTest()},
-  swLap:d=>{const sw=UI.sw;if(!sw.run){toast('Primeiro toca em Iniciar');return}recordTime(d.id,(performance.now()-sw.t0)/1000)},
+  swInd:d=>{if(ctx().tests[UI.tst.id]?.fechada)return;const sw=UI.sw;if(sw.run&&sw.ath===d.id){const t=(performance.now()-sw.t0)/1000;sw.run=false;recordTime(d.id,t)}else{sw.run=true;sw.ath=d.id;sw.t0=performance.now();renderTest()}},
+  swGo:()=>{if(ctx().tests[UI.tst.id]?.fechada)return;const sw=UI.sw;if(sw.run){sw.run=false}else{sw.run=true;sw.t0=performance.now()}renderTest()},
+  swLap:d=>{if(ctx().tests[UI.tst.id]?.fechada)return;const sw=UI.sw;if(!sw.run){toast('Primeiro toca em Iniciar');return}recordTime(d.id,(performance.now()-sw.t0)/1000)},
   printTest:()=>printTest(),
-  delTest:()=>{if(!confirm('Apagar esta sessão de testes?'))return;del('tests',UI.tst.id);closeSheet()},
+  tsLock:d=>{const s=copy(ctx().tests[UI.tst.id]);if(d.v==='1'){s.fechada=today();toast('Sessão fechada')}else{if(!confirm('Reabrir a sessão para editar os resultados?'))return;delete s.fechada}put('tests',s.id,s)},
+  delTest:()=>{if(ctx().tests[UI.tst.id]?.fechada)return;if(!confirm('Apagar esta sessão de testes?'))return;del('tests',UI.tst.id);closeSheet()},
   cfgModelo:d=>{UI.draft.c.modelo=d.v;render()},
   cfgAdd:d=>{const c=UI.draft.c.cfg;const m=today().slice(0,7);const def={valores:{desde:m,1:20,2:28},descontos:{tipo:'irmao',desde:m,v1:5,v2:5,meses:''},pctEspaco:{desde:m,v:40},poupMensal:{desde:m,v:20},pausas:{desde:today(),ate:today(),motivo:''}}[d.key];(c[d.key]=c[d.key]||[]).push(def);render()},
   cfgRm:d=>{UI.draft.c.cfg[d.key].splice(+d.i,1);render()},
@@ -780,8 +782,8 @@ const C={
   repoS:t=>{UI.draft.repoe[t.dataset.t]=t.value},
   evf:t=>{UI.draft.ev[t.dataset.k]=t.value;renderEv()},evGrau:t=>{UI.draft.ev.atl[t.dataset.id].grau=t.value},
   sessF:t=>{const s=getSess();s[t.dataset.k]=t.value.trim();if(t.dataset.k==='plano'&&s.plano&&s.estado!=='dada'&&s.tipo==='normal')s.estado='dada';saveSess(s)},
-  tsF:t=>{const s=copy(ctx().tests[UI.tst.id]);s[t.dataset.k]=t.value;put('tests',s.id,s)},
-  tsRes:t=>{const s=copy(ctx().tests[UI.tst.id]);s.res=s.res||{};const r=(s.res[t.dataset.id]=s.res[t.dataset.id]||{});const arr=(r[UI.tst.test]=r[UI.tst.test]||[]);const v=t.value.replace(',','.');arr[+t.dataset.n]=v===''?'':+v;for(let i=0;i<arr.length;i++)if(arr[i]==null)arr[i]='';put('tests',s.id,s)},
+  tsF:t=>{if(ctx().tests[UI.tst.id]?.fechada)return;const s=copy(ctx().tests[UI.tst.id]);s[t.dataset.k]=t.value;if(s.ate&&s.ate<s.data)s.ate=s.data;if(s.ate===s.data||!s.ate)delete s.ate;put('tests',s.id,s)},
+  tsRes:t=>{if(ctx().tests[UI.tst.id]?.fechada)return;const s=copy(ctx().tests[UI.tst.id]);s.res=s.res||{};const r=(s.res[t.dataset.id]=s.res[t.dataset.id]||{});const arr=(r[UI.tst.test]=r[UI.tst.test]||[]);const v=t.value.replace(',','.');arr[+t.dataset.n]=v===''?'':+v;for(let i=0;i<arr.length;i++)if(arr[i]==null)arr[i]='';put('tests',s.id,s)},
   cfgTop:t=>{UI.draft.c[t.dataset.k]=t.value},cfgTurma:t=>{UI.draft.c.turmas[+t.dataset.i][t.dataset.f]=t.value},
   cfgCfg:t=>{const v=t.value;UI.draft.c.cfg[t.dataset.k]=['entNome','poupNome','titulo','local','municipal'].includes(t.dataset.k)?v:(v===''?'':+v)},
   cfgRow:t=>{const v=t.value;const f=t.dataset.f;UI.draft.c.cfg[t.dataset.key][+t.dataset.i][f]=['1','2','v','v1','v2','meses'].includes(f)?(v===''?'':+v):v},

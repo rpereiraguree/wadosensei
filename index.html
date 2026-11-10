@@ -152,6 +152,8 @@ ol{padding-left:18px}
 .hrow[data-drow] label.mini:has(select){min-width:78px}
 body.nosel{user-select:none;-webkit-user-select:none}
 .hrow.dropmark{box-shadow:inset 0 2px 0 currentColor}
+.lockbar{display:flex;align-items:center;gap:10px;background:var(--chip);border-radius:12px;padding:10px 12px;margin:0 0 12px}
+.tin[readonly]{background:transparent;border-color:transparent}
 </style>
 </head>
 <body>
@@ -162,6 +164,6 @@ body.nosel{user-select:none;-webkit-user-select:none}
 <div id="toast"></div>
 <div id="print"></div>
 <input type="file" id="importFile" accept=".json,application/json" data-c="importFile" hidden>
-<script type="module" src="app.js?v=19"></script>
+<script type="module" src="app.js?v=21"></script>
 </body>
 </html>
