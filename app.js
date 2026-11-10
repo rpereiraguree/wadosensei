@@ -10,7 +10,7 @@ const uid=()=>Math.random().toString(36).slice(2,8)+Date.now().toString(36).slic
 const copy=o=>JSON.parse(JSON.stringify(o));
 const {today,fmtD,eur,mShort,mLabel,DOW,DOWL,seasonLabel,nameOf}=L;
 const pref=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem('ws_'+k)||'null');localStorage.setItem('ws_'+k,JSON.stringify(v))}catch(e){return null}};
-const QS=new URLSearchParams(location.search);const UI={tab:['hoje','aulas','atletas','contas','mais'].includes(QS.get('tab'))?QS.get('tab'):'hoje',club:pref('club'),season:pref('season')||{},aul:{m:null,t:''},ath:{f:'ins',q:''},con:{v:null,m:null,qa:null,qv:'quotas'},pre:{t:null},sheetLive:null,draft:null,sw:{mode:'ind',t0:0,run:false,ath:null}};
+const QS=new URLSearchParams(location.search);const QT=QS.get('tab')==='hoje'?'aulas':QS.get('tab');const UI={tab:['aulas','atletas','testes','contas','mais'].includes(QT)?QT:'aulas',club:QT?pref('club'):null,season:pref('season')||{},aul:{m:null,t:'',scroll:true},ath:{f:'ins',q:''},con:{v:null,m:null,qa:null,qv:'quotas'},pre:{t:null},sheetLive:null,draft:null,sw:{mode:'ind',t0:0,run:false,ath:null}};
 
 /* ---------- acesso a dados ---------- */
 const CL=()=>DB.clubs[UI.club];
@@ -19,8 +19,8 @@ const META=()=>DB.meta||seedMeta();
 function K(){const eps=Object.keys(CD().epocas||{}).sort();let k=UI.season[UI.club];if(!k||!eps.includes(k)){const c=L.seasonOf(today());k=eps.includes(c)?c:eps[eps.length-1]}return k}
 let _ctx=null;
 const ctx=()=>_ctx||(_ctx=(()=>{const c=CL();return{athletes:c.athletes,sessions:c.sessions,payments:c.payments,receitas:c.receitas,fees:c.fees,events:c.events,ledger:c.ledger,awards:c.awards,tests:c.tests,mp:L.monthPres(c.sessions)}})());
-const put=(col,id,data)=>api().put(UI.club,col,id,data);
-const del=(col,id)=>api().del(UI.club,col,id);
+const put=(col,id,data)=>{api().put(UI.club,col,id,data);_ctx=null};
+const del=(col,id)=>{api().del(UI.club,col,id);_ctx=null};
 const saveClub=doc=>api().put(UI.club,null,null,doc);
 const turma=id=>(CD().turmas||[]).find(t=>t.id===id)||{id,nome:id,pre:id};
 const curMonth=k=>{const ms=CD().epocas?.[k]?.meses||[];const t=today().slice(0,7);if(ms.includes(t))return t;const p=ms.filter(m=>m<=t);return p.length?p[p.length-1]:ms[0]||t};
@@ -33,7 +33,7 @@ function sendMsg(ath,text){const link=L.msgLink(ath?.tel,ath?.canal,text);if(lin
   if(navigator.clipboard)navigator.clipboard.writeText(text).then(()=>toast('Sem telemóvel na ficha — mensagem copiada'),()=>prompt('Copia a mensagem',text));else prompt('Copia a mensagem',text)}
 
 /* ---------- arranque ---------- */
-function onData(){_ctx=null;if(UI.club&&!DB.clubs[UI.club])UI.club=null;if(!UI.club){const ids=Object.keys(DB.clubs).filter(id=>DB.clubs[id].doc);if(ids.length)UI.club=ids.includes('cart')?'cart':ids[0]}
+function onData(){_ctx=null;if(UI.club&&DB.clubsLoaded&&!DB.clubs[UI.club]?.doc)UI.club=null;
   render();refreshSheet();if(QS.get('repo')&&CL()?.doc&&!UI.repoDone){UI.repoDone=true;repoDraft(null,false)}}
 function refreshSheet(){if(!UI.sheetLive||$('#sheet').classList.contains('hidden'))return;const ae=document.activeElement;
   if(ae&&$('#sheetBody').contains(ae)&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName)){UI.deferSheet=true;return}UI.deferSheet=false;const b=$('#sheetBody'),sc=b.scrollTop;UI.sheetLive();b.scrollTop=sc}
@@ -43,22 +43,28 @@ if('serviceWorker' in navigator&&!DEMO)navigator.serviceWorker.register('sw.js')
 addEventListener('online',()=>render());addEventListener('offline',()=>render());
 
 /* ---------- render principal ---------- */
-const TABS=[['hoje','Hoje','<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>'],['aulas','Aulas','<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'],
-  ['atletas','Atletas','<circle cx="9" cy="8" r="4"/><path d="M2 21v-1a6 6 0 0 1 12 0v1M16 3.5a4 4 0 0 1 0 8M22 21v-1a6 6 0 0 0-4-5.6"/>'],['contas','Contas','<path d="M18 7a6.5 6.5 0 1 0 0 10"/><path d="M4 10h9M4 14h9"/>'],
+const TABS=[['aulas','Aulas','<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'],
+  ['atletas','Atletas','<circle cx="9" cy="8" r="4"/><path d="M2 21v-1a6 6 0 0 1 12 0v1M16 3.5a4 4 0 0 1 0 8M22 21v-1a6 6 0 0 0-4-5.6"/>'],
+  ['testes','Testes','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/>'],
+  ['contas','Contas','<path d="M18 7a6.5 6.5 0 1 0 0 10"/><path d="M4 10h9M4 14h9"/>'],
   ['mais','Mais','<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>']];
-const MAIS_SUB=['premios','testes','aniv','config','geral','dados'];
+const MAIS_SUB=['premios','config','geral','dados'];
 function render(){
   const hdr=$('#hdr'),nav=$('#tabs'),view=$('#view');
   if(!DB.authReady){hdr.innerHTML='<h1>Wado Sensei</h1>';nav.innerHTML='';view.innerHTML='<div class="empty">A carregar…</div>';return}
   if(!DB.user){hdr.innerHTML='<h1>Wado Sensei</h1>';nav.innerHTML='';view.innerHTML=`<div class="login"><img src="icon-192.png" alt="" width="96" height="96"><h2>Wado Sensei</h2><p class="muted">Gestão dos clubes de karaté</p><button class="btn" data-a="login">Entrar com Google</button></div>`;return}
   if(!DB.metaLoaded||!DB.clubsLoaded){hdr.innerHTML='<h1>Wado Sensei</h1>';nav.innerHTML='';view.innerHTML=`<div class="empty">A carregar dados…${DB.error?'<br><br>'+esc(DB.error):''}</div>`;return}
-  if(!UI.club||!CL()?.doc){hdr.innerHTML='<h1>Wado Sensei</h1>';nav.innerHTML='';view.innerHTML=V.welcome();return}
-  const k=K();const sync=!navigator.onLine?'<span class="sync off" title="Sem rede — grava quando voltar">offline</span>':DB.pending?'<span class="sync">a gravar…</span>':'';
-  hdr.innerHTML=`<select data-c="club" aria-label="Clube" class="clubsel">${Object.values(DB.clubs).filter(c=>c.doc).map(c=>`<option value="${c.doc.id}" ${c.doc.id===UI.club?'selected':''}>${esc(c.doc.nome)}</option>`).join('')}<option value="__new">+ Novo clube…</option></select>${sync}
+  const clubs=Object.values(DB.clubs).filter(c=>c.doc);
+  if(!clubs.length){hdr.innerHTML='<h1>Wado Sensei</h1>';nav.innerHTML='';view.innerHTML=V.welcome();return}
+  const sync=!navigator.onLine?'<span class="sync off" title="Sem rede — grava quando voltar">offline</span>':DB.pending?'<span class="sync">a gravar…</span>':'';
+  if(!UI.club||!CL()?.doc){hdr.innerHTML=`<h1>Wado Sensei</h1>${sync}`;nav.innerHTML='';view.innerHTML=V.picker(clubs);return}
+  const k=K();
+  hdr.innerHTML=`<button class="hb" data-a="toPicker" aria-label="Voltar aos clubes">‹</button><h1 class="hn">${esc(CD().nome)}</h1>${sync}
     <select data-c="season" aria-label="Época">${Object.keys(CD().epocas||{}).sort().map(s=>`<option value="${s}" ${s===k?'selected':''}>${seasonLabel(s)}</option>`).join('')}</select>`;
   const on=MAIS_SUB.includes(UI.tab)?'mais':UI.tab;
   nav.innerHTML=TABS.map(([t,l,ic])=>`<button data-a="tab" data-t="${t}" class="${on===t?'on':''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic}</svg>${l}</button>`).join('');
-  view.innerHTML=(DB.error?`<div class="card banner sm">${esc(DB.error)} <button class="btn sm ghost" data-a="clrErr">OK</button></div>`:'')+V[UI.tab]();
+  view.innerHTML=(DB.error?`<div class="card banner sm">${esc(DB.error)} <button class="btn sm ghost" data-a="clrErr">OK</button></div>`:'')+(V[UI.tab]||V.aulas)();
+  if(UI.tab==='aulas'&&UI.aul.scroll){UI.aul.scroll=false;const el=$('#hojeAnchor'),box=$('#mlist');if(el&&box)box.scrollTop=Math.max(0,el.offsetTop-4)}
 }
 const V={};
 const empty=t=>`<div class="empty">${t}</div>`;
@@ -67,81 +73,115 @@ const back=t=>`<div class="ch"><button class="btn sm ghost" data-a="tab" data-t=
 V.welcome=()=>`<div class="card"><h2>Bem-vindo, Sensei</h2><p>Ainda não há clubes nesta conta. Posso criar já os dois clubes com tudo o que definimos: horários, turmas, valores e descontos.</p><p class="sm">Depois importa os atletas e o histórico de 25/26 em <b>Mais → Dados e backup → Importar backup</b>, com o ficheiro <b>cart-2025-26.json</b> (guardado só contigo, nunca no GitHub).</p>
   <button class="btn block" data-a="seedAll">Criar Cart Wado Karaté + Flexgym</button><button class="btn ghost block" data-a="newClub">Começar com um clube vazio</button>
   <p class="muted sm" style="margin-top:12px">Sessão: ${esc(DB.user.email)} · <a href="#" data-a="logout">sair</a></p></div>`;
+V.picker=clubs=>`<div class="picker">${clubs.sort((a,b)=>a.doc.nome.localeCompare(b.doc.nome,'pt')).map(c=>`<button class="pcard" data-a="pickClub" data-id="${c.doc.id}">${esc(c.doc.nome.toUpperCase())}</button>`).join('')}
+  <button class="padd" data-a="newClub" aria-label="Novo clube">+</button><p class="muted sm" style="text-align:center;margin-top:24px">${esc(DB.user.email)}${DB.mode==='demo'?' (demo)':''} · <a href="#" data-a="logout">Sair</a></p></div>`;
 
-/* ---------- HOJE ---------- */
+/* ---------- AULAS (inclui o antigo Hoje) ---------- */
 function sessionsOn(d){return L.sessionsBetween(CD(),CL().sessions,d,d)}
-function sessCounts(s){const k=L.seasonOf(s.data);const exp=athsIn(k,s.turma,s.data.slice(0,7)).filter(a=>(L.enr(a,k).dias||[]).includes(L.wdOf(s.data))).length;const P=Object.values(s.pres||{}).filter(v=>v==='P').length;return{exp,P}}
-function chipOf(s){const t=today();if(s.estado==='feriado')return `<span class="tag t-mut">${esc(s.motivo||'Feriado')}</span>`;if(s.estado==='cancelada'){const r=L.reposedBy(CL().sessions,s.id);return `<span class="tag t-bad">Cancelada${r?' · reposta':' · por repor'}</span>`}
-  if(s.virtual)return s.data<t?'<span class="tag t-warn">Por registar</span>':'<span class="tag t-mut">Prevista</span>';
-  const lab=s.tipo==='reposicao'?'Reposição':s.tipo==='extra'?'Extra':'Dada';
-  if(s.estado!=='dada')return `<span class="tag t-blue">${lab==='Dada'?'Prevista':lab+' prevista'}</span>`;return `<span class="tag ${s.tipo==='normal'?'t-ok':'t-blue'}">${lab}</span>`}
-function sessRow(s,showDate){const c=sessCounts(s);const t=turma(s.turma);
-  return `<div class="li" data-a="openSess" data-id="${s.id}"><div class="grow"><div class="nm">${showDate?`${DOW[L.wdOf(s.data)]} ${fmtD(s.data).slice(0,5)} · `:''}${esc(t.nome)} <span class="muted sm">${esc(s.ini||'')}${s.fim?'–'+esc(s.fim):''}</span></div>
-    <div class="muted sm">${s.plano?`<b class="code">${esc(s.plano)}</b> · `:''}${s.estado==='cancelada'||s.estado==='feriado'?esc(s.motivo||''):`${c.P} presentes${s.tipo==='normal'?' de '+c.exp:''}`}</div></div>${chipOf(s)}</div>`}
-V.hoje=()=>{const cd=CD(),k=K(),t=today(),cx=ctx();let h='';
-  let d=t,ss=sessionsOn(t);if(!ss.length){for(let i=1;i<15&&!ss.length;i++){d=L.addDays(t,i);ss=sessionsOn(d)}}
-  h+=`<div class="ch"><h3>${d===t?'Aulas de hoje':'Próximas aulas'}</h3><span class="muted sm">${DOWL[L.wdOf(d)]} ${fmtD(d)}</span></div>`;
-  h+=ss.length?`<div class="list">${ss.map(s=>sessRow(s)).join('')}</div>`:empty('Sem aulas nos próximos dias.');
+function trocaOut(s){return s.trocas||{}}
+function trocaIn(s){return s.vem||{}}
+function expectedList(s){const k=L.seasonOf(s.data),wd=L.wdOf(s.data),m=s.data.slice(0,7);const out=trocaOut(s),inn=trocaIn(s);
+  const base=athsIn(k,s.turma,m).filter(a=>(L.enr(a,k).dias||[]).includes(wd)&&!out[a.id]);const extra=Object.keys(inn).map(id=>ctx().athletes[id]).filter(a=>a&&!base.includes(a));return[...base,...extra]}
+function sessCounts(s){const exp=expectedList(s).length;const P=Object.values(s.pres||{}).filter(v=>v==='P').length;return{exp,P}}
+function chipOf(s){const t=today();if(s.estado==='feriado')return `<span class="tag t-mut">${esc(s.motivo||'Feriado')}</span>`;if(s.estado==='cancelada'){const r=L.reposedBy(CL().sessions,s.id);return `<span class="tag t-bad">Cancelada${r?' · reposta '+fmtD(r.data).slice(0,5):' · por repor'}</span>`}
+  if(s.virtual)return s.data<t?'<span class="tag t-warn">Por registar</span>':'';
+  const lab=s.tipo==='reposicao'?'Reposição':s.tipo==='extra'?'Extra':'';
+  if(s.estado!=='dada')return lab?`<span class="tag t-blue">${lab}</span>`:'';return lab?`<span class="tag t-blue">${lab}</span>`:''}
+function sessRow(s,showDate,extraCls){const c=sessCounts(s);const t=turma(s.turma);const past=s.data<today();
+  const info=s.estado==='cancelada'||s.estado==='feriado'?esc(s.motivo||''):`${c.P} presentes${s.tipo==='normal'?' de '+c.exp:''}`;
+  return `<div class="li ${past?'past':''} ${extraCls||''}" data-a="openSess" data-id="${s.id}"><div class="grow"><div class="nm">${showDate?`${DOW[L.wdOf(s.data)]} ${fmtD(s.data).slice(0,5)} · `:''}<span class="tn">${esc(t.nome)}</span> <span class="muted sm">${esc(s.ini||'')}${s.fim?'–'+esc(s.fim):''}</span></div>
+    <div class="muted sm">${s.plano?`<b class="code">${esc(s.plano)}</b> · `:''}${info} ${chipOf(s)}</div></div>${s.estado==='feriado'?'':`<button class="btn sm ghost" data-a="alterSess" data-id="${s.id}">Alterar</button>`}</div>`}
+function evRow(e,compact){const t=today();const dd=L.dayDiff(t,e.data);return `<div class="li ev" data-a="editEv" data-id="${e.id}"><div class="grow"><div class="nm">${DOW[L.wdOf(e.data)]} ${fmtD(e.data).slice(0,5)} · ${esc(e.nome)}</div><div class="muted sm">${esc(e.local||'')}${compact?(dd===0?' · hoje':dd===1?' · amanhã':` · daqui a ${dd} dias`):((e.horario||'').trim()?' · '+esc(e.horario.trim().split('\n')[0]):'')}</div></div><span class="tag t-warn">Evento</span></div>`}
+function alertRows(){const cd=CD(),k=K(),t=today(),cx=ctx(),M=META();const al=[];const m=curMonth(k);const ins=athsIn(k,'',m);
   const pend=L.pendingCancelled(CL().sessions);
-  if(pend.length)h+=`<div class="card"><div class="ch"><div><b>${pend.length} aula${pend.length>1?'s':''} por repor</b><div class="muted sm">${pend.map(s=>`${turma(s.turma).nome} ${fmtD(s.data).slice(0,5)}`).join(' · ')}</div></div><button class="btn sm" data-a="newRepo">Repor</button></div></div>`;
-  const al=[];const m=curMonth(k);
-  const ins=athsIn(k,'',m);
+  if(pend.length)al.push(`<div class="srow"><div class="grow"><b>${pend.length} aula${pend.length>1?'s':''} cancelada${pend.length>1?'s':''} sem reposição</b><div class="muted sm">${pend.map(s=>`${turma(s.turma).nome} ${fmtD(s.data).slice(0,5)}`).join(' · ')}</div></div><button class="btn sm" data-a="alterSess" data-id="${pend[0].id}">Repor</button></div>`);
   const bd=L.upcomingBirthdays(ins,t,7);
   if(bd.length)al.push(`<div class="srow"><div class="grow"><b>🎂 Aniversários</b>${bd.map(x=>`<div class="row gap" style="margin-top:6px"><span class="grow sm">${x.i===0?'<b>Hoje</b>':x.i===1?'Amanhã':DOW[L.wdOf(x.d)]+' '+fmtD(x.d).slice(0,5)} · ${esc(nameOf(x.a))} faz ${x.age}</span>${x.i<=1?`<button class="btn sm ghost" data-a="parab" data-id="${x.a.id}">Parabéns</button>`:''}</div>`).join('')}</div></div>`);
   if(cd.modelo==='gestao'){const due=L.dueList(cd,cx,k,m);const ids=[...new Set(due.map(x=>x.id))];
-    if(ids.length)al.push(`<div class="srow"><div class="grow"><b>Mensalidades em falta · ${eur(due.reduce((a,x)=>a+x.v,0))}</b><div class="muted sm">${ids.slice(0,6).map(N).join(', ')}${ids.length>6?'…':''}</div></div><button class="btn sm ghost" data-a="goContas" data-v="mens">Ver</button></div>`)}
+    if(ids.length)al.push(`<div class="srow"><div class="grow"><b>Mensalidades em falta · ${eur(due.reduce((a,x)=>a+x.v,0))}</b><div class="muted sm">${ids.slice(0,6).map(N).join(', ')}${ids.length>6?'…':''}</div></div><button class="btn sm ghost" data-a="goDeve">Ver</button></div>`)}
   else{const pm=L.addMonths(t.slice(0,7),-1);if((cd.epocas?.[k]?.meses||[]).includes(pm)&&!cx.receitas[pm])al.push(`<div class="srow"><div class="grow"><b>Remuneração de ${L.MESES[+pm.slice(5)-1].toLowerCase()} por registar</b><div class="muted sm">Previsto ${eur(L.profMonth(cd,cx,k,pm).prev)}</div></div><button class="btn sm ghost" data-a="goContas" data-v="rem">Registar</button></div>`)}
-  const ms=L.moneySummary(META(),cx,t);if(ms.falta||ms.mao)al.push(`<div class="srow"><div class="grow"><b>Quotas e taxas</b><div class="muted sm">Por cobrar ${eur(ms.falta)} · Em mão (para entregar) ${eur(ms.mao)}</div></div><button class="btn sm ghost" data-a="goContas" data-v="quotas">Ver</button></div>`);
+  const ms=L.moneySummary(M,cx,t);if(ms.falta||ms.mao)al.push(`<div class="srow"><div class="grow"><b>Quotas e taxas</b><div class="muted sm">Por cobrar ${eur(ms.falta)} · Em mão (para entregar) ${eur(ms.mao)}</div></div><button class="btn sm ghost" data-a="goContas" data-v="quotas">Ver</button></div>`);
   const Y=t.slice(0,4);if(+t.slice(5,7)<=3&&ins.length&&!Object.values(cx.fees).some(f=>f.ano===Y))al.push(`<div class="srow"><div class="grow"><b>Quotas de ${Y} ainda não geradas</b><div class="muted sm">Federação, associação e seguro para os atletas inscritos.</div></div><button class="btn sm" data-a="genQuotas" data-y="${Y}">Gerar</button></div>`);
+  for(const p of prizesDue())al.push(`<div class="srow"><div class="grow"><b>🏅 ${esc(p.label)} por entregar</b><div class="muted sm">${esc(p.turma)} · ${esc(p.nomes)}</div></div><button class="btn sm ghost" data-a="goPremios" data-t="${p.t}">Ver</button></div>`);
   const st=L.attStats(cd,cx,L.seasonRange(k).from,L.seasonRange(k).to,+cd.cfg?.pesoJ||0.2);
   const low=ins.filter(a=>{const x=st[a.id];if(!x)return false;const r=x.hist.slice(-6);return r.length>=4&&r.filter(z=>z[1]!=='F').length/r.length<.5});
   if(low.length)al.push(`<div class="srow"><div class="grow"><b>Assiduidade baixa nas últimas aulas</b><div class="muted sm">${low.map(nameOf).join(', ')}</div></div></div>`);
   if(!ins.length)al.push(`<div class="srow"><div class="grow"><b>Época ${seasonLabel(k)} sem atletas inscritos</b><div class="muted sm">Inscreve quem continua e adiciona os novos.</div></div><button class="btn sm" data-a="goInscrever">Inscrever</button></div>`);
-  h+=`<div class="card"><h3 style="margin-bottom:6px">Alertas</h3>${al.length?al.join(''):'<div class="muted sm">Tudo em dia.</div>'}</div>`;
-  return h};
-
-/* ---------- AULAS ---------- */
-V.aulas=()=>{const k=K(),ep=CD().epocas[k]||{};const months=[];if(ep.inicio){let m=ep.inicio.slice(0,7);const end=(ep.fim||L.addDays(ep.inicio,330)).slice(0,7);while(m<=end){months.push(m);m=L.addMonths(m,1)}}
-  if(!UI.aul.m||!months.includes(UI.aul.m))UI.aul.m=months.includes(today().slice(0,7))?today().slice(0,7):months[months.length-1];const m=UI.aul.m;
-  const last=L.addDays(L.addMonths(m,1)+'-01',-1);let ss=L.sessionsBetween(CD(),CL().sessions,m+'-01',last);if(UI.aul.t)ss=ss.filter(s=>s.turma===UI.aul.t);
-  let h=`<div class="row gap"><select data-c="aulM" class="grow">${months.map(x=>`<option value="${x}" ${x===m?'selected':''}>${mLabel(x)}</option>`).join('')}</select><button class="btn" data-a="newRepo">+ Reposição</button></div>
+  return al}
+function renderAlerts(){const al=alertRows();openSheet(shH('Alertas')+`<div class="card">${al.length?al.join(''):'<div class="muted sm">Tudo em dia.</div>'}</div>`)}
+V.aulas=()=>{const cd=CD(),k=K(),t=today(),cx=ctx(),ep=cd.epocas[k]||{};
+  let d=t,ss=sessionsOn(t).filter(s=>s.estado!=='feriado');if(!ss.length){for(let i=1;i<15&&!ss.length;i++){d=L.addDays(t,i);ss=sessionsOn(d).filter(s=>s.estado!=='feriado')}}
+  const nextEv=Object.values(cx.events).filter(e=>e.data>=t&&e.data<=L.addDays(t,45)).sort((a,b)=>a.data<b.data?-1:1).slice(0,3);
+  let h=`<div class="topcard"><div class="ch"><h3>${d===t?'Aulas de hoje':'Próximas aulas'}</h3><span class="muted sm">${DOWL[L.wdOf(d)]} ${fmtD(d)}</span></div>
+    ${ss.length?`<div class="list">${ss.map(s=>sessRow(s)).join('')}</div>`:empty('Sem aulas nos próximos dias.')}
+    ${nextEv.length?`<div class="list">${nextEv.map(e=>evRow(e,true)).join('')}</div>`:''}</div>`;
+  const months=[];if(ep.inicio){let m=ep.inicio.slice(0,7);const end=(ep.fim||L.addDays(ep.inicio,330)).slice(0,7);while(m<=end){months.push(m);m=L.addMonths(m,1)}}
+  if(!UI.aul.m||!months.includes(UI.aul.m))UI.aul.m=months.includes(t.slice(0,7))?t.slice(0,7):months[months.length-1];const m=UI.aul.m;
+  const al=alertRows().length;
+  h+=`<div class="row gap"><select data-c="aulM" class="grow">${months.map(x=>`<option value="${x}" ${x===m?'selected':''}>${mLabel(x)}</option>`).join('')}</select><button class="btn" data-a="newRepo">+ Reposição</button><button class="btn ${al?'alert':'ghost'}" data-a="showAlerts">${al} Alerta${al===1?'':'s'}</button></div>
    <div class="row gap" style="margin-top:8px"><button class="btn ghost grow" data-a="newEvA">+ Evento</button><button class="btn ghost grow" data-a="planMes">🖨 Plano do mês</button></div>
-   <div class="chips"><button class="chip ${!UI.aul.t?'on':''}" data-a="aulT" data-t="">Todas</button>${CD().turmas.map(t=>`<button class="chip ${UI.aul.t===t.id?'on':''}" data-a="aulT" data-t="${t.id}">${esc(t.nome)}</button>`).join('')}</div>`;
-  const evs=Object.values(ctx().events).filter(e=>e.data>=m+'-01'&&e.data<=last);
-  if(!ss.length&&!evs.length)return h+empty('Sem aulas neste mês.');
-  const given=ss.filter(L.isGiven).length,canc=ss.filter(s=>s.estado==='cancelada').length,por=ss.filter(s=>s.virtual&&s.estado!=='feriado'&&s.data<today()).length;
-  const items=[...ss.map(s=>({d:s.data,k:(s.ini||'')+'0',html:sessRow(s,true)})),...evs.map(e=>({d:e.data,k:'zz',html:`<div class="li ev" data-a="editEv" data-id="${e.id}"><div class="grow"><div class="nm">${DOW[L.wdOf(e.data)]} ${fmtD(e.data).slice(0,5)} · ${esc(e.nome)}</div><div class="muted sm">${esc(e.local||'')}${(e.horario||'').trim()?' · '+esc(e.horario.trim().split('\n')[0]):''}</div></div><span class="tag t-warn">Evento</span></div>`}))].sort((a,b)=>a.d!==b.d?(a.d<b.d?-1:1):(a.k<b.k?-1:1));
-  h+=`<p class="muted sm">${given} dadas · ${canc} canceladas${por?` · <b style="color:var(--warn)">${por} por registar</b>`:''}${evs.length?` · ${evs.length} evento(s)`:''}</p><div class="list">${items.map(x=>x.html).join('')}</div>`;
+   <div class="chips"><button class="chip ${!UI.aul.t?'on':''}" data-a="aulT" data-t="">Todas</button>${cd.turmas.map(x=>`<button class="chip ${UI.aul.t===x.id?'on':''}" data-a="aulT" data-t="${x.id}">${esc(x.nome)}</button>`).join('')}</div>`;
+  const last=L.addDays(L.addMonths(m,1)+'-01',-1);let ms=L.sessionsBetween(cd,CL().sessions,m+'-01',last);if(UI.aul.t)ms=ms.filter(s=>s.turma===UI.aul.t);
+  const evs=Object.values(cx.events).filter(e=>e.data>=m+'-01'&&e.data<=last);
+  if(!ms.length&&!evs.length)return h+empty('Sem aulas neste mês.');
+  const given=ms.filter(L.isGiven).length,canc=ms.filter(s=>s.estado==='cancelada').length,por=ms.filter(s=>s.virtual&&s.estado!=='feriado'&&s.data<t).length;
+  const items=[...ms.map(s=>({d:s.data,k:(s.ini||'')+'0',s})),...evs.map(e=>({d:e.data,k:'zz',e}))].sort((a,b)=>a.d!==b.d?(a.d<b.d?-1:1):(a.k<b.k?-1:1));
+  let anch=false;const rows=items.map(x=>{let pre='';if(!anch&&x.d>=t){anch=true;pre='<div id="hojeAnchor"></div>'}return pre+(x.s?sessRow(x.s,true):evRow(x.e))});
+  h+=`<p class="muted sm">${given} dadas · ${canc} canceladas${por?` · <b style="color:var(--warn)">${por} por registar</b>`:''}${evs.length?` · ${evs.length} evento(s)`:''}</p><div class="list mlist" id="mlist">${rows.join('')}</div>`;
   h+=`<button class="btn ghost block" data-a="newExtra">+ Aula extra</button>`;return h};
 
-function openSess(id){const st=CL().sessions[id];let v=null;if(!st){const[d,t]=id.split('_');v=sessionsOn(d).find(s=>s.id===id);if(!v)return}
-  UI.sess={id,v,aw:null};UI.sheetLive=renderSess;renderSess()}
-function getSess(){const st=CL().sessions[UI.sess.id];return st?{...copy(st),id:UI.sess.id,virtual:false}:copy(UI.sess.v)}
-function saveSess(s){const d={...s,id:UI.sess.id};delete d.virtual;put('sessions',UI.sess.id,d)}
-function renderSess(){const s=getSess(),cd=CD(),k=L.seasonOf(s.data),t=turma(s.turma),wd=L.wdOf(s.data),m=s.data.slice(0,7);
-  const rep=s.tipo!=='normal';
-  let h=shH(`${DOWL[wd]} ${fmtD(s.data)}`)+`<div class="muted" style="margin:-6px 0 10px">${esc(t.nome)} · ${esc(s.ini||'')}${s.fim?'–'+esc(s.fim):''}${rep?` · <b>${s.tipo==='reposicao'?'Reposição':'Aula extra'}</b>`:''}</div>`;
-  if(!rep)h+=`<div class="seg"><button class="${s.estado==='dada'?'on':''}" data-a="sessEst" data-v="dada">Dada</button><button class="${s.estado==='cancelada'?'on':''}" data-a="sessEst" data-v="cancelada">Cancelada</button></div>`;
+function getSessById(id){const st=CL().sessions[id];if(st)return{...copy(st),id,virtual:false};const d=id.split('_')[0];const v=sessionsOn(d).find(s=>s.id===id);return v?copy(v):null}
+function putSess(s){const d={...s};delete d.virtual;put('sessions',d.id,d)}
+function openSess(id){const v=getSessById(id);if(!v)return;UI.sess={id,v,aw:null,tr:null};UI.sheetLive=renderSess;renderSess()}
+function getSess(){return getSessById(UI.sess.id)||copy(UI.sess.v)}
+function saveSess(s){putSess({...s,id:UI.sess.id})}
+function renderSess(){const s=getSess(),cd=CD(),k=L.seasonOf(s.data),t=turma(s.turma),wd=L.wdOf(s.data),m=s.data.slice(0,7),M=META();
+  const rep=s.tipo!=='normal';const graus=M.graus||[];
+  let h=shH(`<span class="tbig">${esc(t.nome)}</span>`)+`<div class="sline"><span>${DOWL[wd]} ${fmtD(s.data)} · ${esc(s.ini||'')}${s.fim?'–'+esc(s.fim):''}${rep?` · <b>${s.tipo==='reposicao'?'Reposição':'Aula extra'}</b>`:''}</span>
+    ${s.estado==='cancelada'?'':s.plano?`<b class="code">${esc(s.plano)}</b>`:`<button class="btn sm ghost" data-a="sessSug">Gerar código</button>`}</div>`;
   if(rep&&s.repoe?.length)h+=`<p class="muted sm">Repõe: ${s.repoe.map(id=>{const x=CL().sessions[id];return x?`${turma(x.turma).nome} de ${fmtD(x.data)}`:id}).join(', ')}</p>`;
   if(s.estado==='cancelada'){const r=L.reposedBy(CL().sessions,s.id);
-    h+=`<label>Motivo</label><input value="${esc(s.motivo||'')}" data-c="sessF" data-k="motivo" placeholder="ex.: doença, feriado, sala ocupada">
-    <div class="card" style="margin-top:12px">${r?`Reposta em <b>${fmtD(r.data)}</b> (${esc(r.ini||'')}) <button class="btn sm ghost" data-a="openSess" data-id="${r.id}">Abrir</button>`:`<b>Por repor.</b><button class="btn block" data-a="newRepo" data-from="${s.id}">Criar reposição</button>`}</div>`}
-  else{const sug=L.suggestCode(cd,CL().sessions,s);
-    h+=`<div class="grid2"><div><label>Plano de aula</label><input value="${esc(s.plano||'')}" placeholder="${esc(sug)}" data-c="sessF" data-k="plano" class="code"></div><div><label>&nbsp;</label><button class="btn ghost" style="width:100%" data-a="sessSug">Usar ${esc(sug)}</button></div></div>
-    <label>Nota rápida</label><input value="${esc(s.nota||'')}" data-c="sessF" data-k="nota" placeholder="ex.: muito agitados, trocar o jogo">`;
-    const pres=s.pres||{};const all=athsIn(k,s.turma,m);const extra=Object.keys(pres).filter(id=>!all.find(a=>a.id===id)&&ctx().athletes[id]).map(id=>ctx().athletes[id]);
-    const exp=rep?[...all,...extra]:[...all.filter(a=>(L.enr(a,k).dias||[]).includes(wd)||pres[a.id]),...extra];const others=rep?[]:all.filter(a=>!exp.includes(a));
-    const P=Object.values(pres).filter(v=>v==='P').length;
-    h+=`<div class="ch" style="margin-top:14px"><h3>Presenças · ${P}</h3>${rep?'':'<button class="btn sm ghost" data-a="allP">Todos P</button>'}</div>`;
-    const awS=Object.values(ctx().awards||{}).filter(x=>x.sess===s.id);const types=META().awardTypes||[];
-    const row=a=>{const v=pres[a.id]||'';const mine=awS.filter(x=>x.ath===a.id);const pts=mine.reduce((t,x)=>t+(+x.pts||0),0);const op=UI.sess.aw===a.id;
-      const awr=op?`<div class="awrow">${types.map(t=>`<button class="chip" data-a="sessAwAdd" data-id="${a.id}" data-t="${t.id}">${esc(t.nome)} +${t.pts}</button>`).join('')}${mine.map(x=>`<button class="chip on" data-a="sessAwDel" data-id="${x.id}">${esc(x.nome)} +${x.pts} ✕</button>`).join('')}</div>`:'';
-      return `<div class="li"><div class="grow nm">${esc(nameOf(a))}${pts?` <span class="tag t-blue">+${pts}</span>`:''}</div><button class="star ${op?'on':''}" data-a="sessAw" data-id="${a.id}" aria-label="Prémio">★</button><div class="pfj">${(rep?['P']:['P','F','J']).map(x=>`<button class="m ${x} ${v===x?'on':''}" data-a="mark" data-id="${a.id}" data-s="${x}">${x}</button>`).join('')}</div></div>${awr}`};
-    h+=exp.length?`<div class="list">${exp.map(row).join('')}</div>`:empty('Ninguém inscrito nesta turma.');
-    if(others.length)h+=`<details><summary>Outros da turma (${others.length})</summary><div class="list">${others.map(row).join('')}</div></details>`;
-    h+=`<p class="muted sm">${rep?'Na reposição só se registam presenças — quem não vem não leva falta.':'P presente · F falta · J justificada. Toca de novo para limpar. ★ atribui pontos extra (comportamento, desempenho…).'}</p>`}
+    h+=`<div class="card banner"><b>Aula cancelada</b>${s.motivo?' · '+esc(s.motivo):''}<div class="sm" style="margin-top:6px">${r?`Reposta em <b>${DOW[L.wdOf(r.data)]} ${fmtD(r.data)}</b> (${esc(r.ini||'')})`:'Ainda sem reposição.'}</div><button class="btn block" data-a="alterSess" data-id="${s.id}">Alterar</button></div>`;openSheet(h);return}
+  const pres=s.pres||{};const out=trocaOut(s),inn=trocaIn(s);const all=athsIn(k,s.turma,m);
+  const extra=Object.keys(pres).filter(id=>!all.find(a=>a.id===id)&&ctx().athletes[id]).map(id=>ctx().athletes[id]);
+  const gi=a=>graus.indexOf(a.grau);const srt=arr=>arr.sort((x,y)=>gi(y)-gi(x)||nameOf(x).localeCompare(nameOf(y)));
+  let exp,others;if(rep){exp=srt([...all,...extra]);others=[]}else{exp=srt([...expectedList(s),...extra.filter(a=>!inn[a.id])].filter((a,i,arr)=>arr.indexOf(a)===i));const gone=all.filter(a=>out[a.id]);others=srt(all.filter(a=>!exp.includes(a)&&!out[a.id]));exp=[...exp,...gone]}
+  const P=Object.values(pres).filter(v=>v==='P').length;
+  h+=`<div class="ch" style="margin-top:12px"><h3>Presenças · ${P}</h3>${rep?'':'<button class="btn sm ghost" data-a="allP">Todos P</button>'}</div>`;
+  const awS=Object.values(ctx().awards||{}).filter(x=>x.sess===s.id);const types=M.awardTypes||[];
+  const row=a=>{const v=pres[a.id]||'';const mine=awS.filter(x=>x.ath===a.id);const pts=mine.reduce((q,x)=>q+(+x.pts||0),0);const op=UI.sess.aw===a.id,trOp=UI.sess.tr===a.id;
+    const awr=op?`<div class="awrow">${types.map(x=>`<button class="chip" data-a="sessAwAdd" data-id="${a.id}" data-t="${x.id}">${esc(x.nome)} +${x.pts}</button>`).join('')}${mine.map(x=>`<button class="chip on" data-a="sessAwDel" data-id="${x.id}">${esc(x.nome)} +${x.pts} ✕</button>`).join('')}</div>`:'';
+    let trr='';if(trOp){const opts=L.sessionsBetween(cd,CL().sessions,L.addDays(s.data,-7),L.addDays(s.data,14)).filter(z=>z.turma===s.turma&&z.id!==s.id&&z.estado!=='cancelada'&&z.estado!=='feriado'&&z.data>=L.addDays(today(),-7));
+      trr=`<div class="awrow"><span class="sm muted" style="width:100%">Vem antes noutro dia:</span>${opts.map(z=>`<button class="chip" data-a="trocaSet" data-id="${a.id}" data-to="${z.id}">${DOW[L.wdOf(z.data)]} ${fmtD(z.data).slice(0,5)}</button>`).join('')||'<span class="sm muted">Sem aulas próximas desta turma.</span>'}</div>`}
+    const outTo=out[a.id];const inFrom=inn[a.id];
+    const mid=outTo?`<span class="tag t-blue">→ ${(()=>{const z=getSessById(outTo);return z?DOW[L.wdOf(z.data)]+' '+fmtD(z.data).slice(0,5):'outro dia'})()}</span>`:`<div class="pfj">${(rep?['P']:['P','F','J']).map(x=>`<button class="m ${x} ${v===x?'on':''}" data-a="mark" data-id="${a.id}" data-s="${x}">${x}</button>`).join('')}</div>`;
+    return `<div class="li"><div class="grow"><div class="nm nm2">${esc(nameOf(a))}${pts?` <span class="tag t-blue">+${pts}</span>`:''}</div><div class="muted sm">${esc(a.grau||'')}${inFrom?`${a.grau?' · ':''}<b>troca de ${(()=>{const z=getSessById(inFrom);return z?DOW[L.wdOf(z.data)]+' '+fmtD(z.data).slice(0,5):''})()}</b>`:''}</div></div>
+      ${rep?'':`<button class="star ${trOp||outTo?'on':''}" data-a="${outTo?'trocaDel':'sessTr'}" data-id="${a.id}" aria-label="Troca de dia" title="Troca de dia">⇄</button>`}<button class="star ${op?'on':''}" data-a="sessAw" data-id="${a.id}" aria-label="Prémio">★</button>${mid}</div>${awr}${trr}`};
+  h+=exp.length?`<div class="list">${exp.map(row).join('')}</div>`:empty('Ninguém inscrito nesta turma.');
+  if(others.length)h+=`<details><summary>Outros da turma (${others.length})</summary><div class="list">${others.map(row).join('')}</div></details>`;
+  h+=`<p class="muted sm">${rep?'Na reposição só se registam presenças — quem não vem não leva falta.':'P presente · F falta · J justificada. ⇄ troca de dia · ★ pontos extra.'}</p>`;
+  h+=`<label>Nota rápida</label><input value="${esc(s.nota||'')}" data-c="sessF" data-k="nota" placeholder="ex.: muito agitados, trocar o jogo">`;
   if(!s.virtual)h+=`<button class="btn danger block" data-a="sessDel">${rep?'Apagar esta aula':'Limpar registo desta aula'}</button>`;
   openSheet(h)}
+
+/* Alterar aula: cancelar/adiar com reposição, ou mudar data/hora de uma reposição */
+function alterDraft(id){const s=getSessById(id);if(!s)return;const r=L.reposedBy(CL().sessions,s.id);const sat=(()=>{let d=L.addDays(s.data,1);for(let i=0;i<7;i++){if(L.wdOf(d)===6)return d;d=L.addDays(d,1)}return d})();
+  UI.draft={kind:'alter',id,s,motivo:s.motivo||'',repo:!r,rdata:sat,rini:'10:00',rfim:'11:00',ndata:s.data,nini:s.ini||'',nfim:s.fim||''};UI.sheetLive=null;renderAlter()}
+function renderAlter(){const d=UI.draft,s=d.s;const t=turma(s.turma);const r=L.reposedBy(CL().sessions,s.id);
+  let h=shH('Alterar aula')+`<div class="muted" style="margin:-6px 0 10px"><b>${esc(t.nome)}</b> · ${DOWL[L.wdOf(s.data)]} ${fmtD(s.data)} · ${esc(s.ini||'')}</div>`;
+  if(s.tipo!=='normal'){h+=`<div class="card"><h3>Mudar data ou hora</h3><div class="grid3"><div><label>Data</label><input type="date" value="${d.ndata}" data-i="dr" data-k="ndata"></div><div><label>Início</label><input type="time" value="${d.nini}" data-i="dr" data-k="nini"></div><div><label>Fim</label><input type="time" value="${d.nfim}" data-i="dr" data-k="nfim"></div></div>
+    <button class="btn block" data-a="alterMove">Guardar</button></div><button class="btn danger block" data-a="sessDelAlt">Apagar esta ${s.tipo==='reposicao'?'reposição':'aula extra'}</button>`;openSheet(h);return}
+  if(s.estado==='cancelada'){h+=`<div class="card"><b>Cancelada</b>${s.motivo?' · '+esc(s.motivo):''}<div class="sm muted" style="margin-top:4px">${r?`Reposta em ${DOW[L.wdOf(r.data)]} ${fmtD(r.data)} (${esc(r.ini||'')})`:'Ainda sem reposição.'}</div></div>
+    <button class="btn ghost block" data-a="alterUndo">Anular cancelamento (a aula vai acontecer)</button>`;
+    if(r){h+=`<button class="btn ghost block" data-a="openAlterOf" data-id="${r.id}">Mudar a reposição</button>`;openSheet(h);return}}
+  else h+=`<div class="card"><h3>Cancelar ou adiar</h3><label>Motivo</label><input value="${esc(d.motivo)}" data-i="dr" data-k="motivo" placeholder="ex.: doença, sala ocupada">`;
+  if(s.estado==='cancelada')h+=`<div class="card">`;
+  h+=`<label>Reposição</label><button class="chip ${d.repo?'on':''}" style="width:100%;padding:9px" data-a="alterRepoT">${d.repo?'Marcar reposição':'Sem reposição por agora'}</button>
+    ${d.repo?`<div class="grid3"><div><label>Data</label><input type="date" value="${d.rdata}" data-i="dr" data-k="rdata"></div><div><label>Início</label><input type="time" value="${d.rini}" data-i="dr" data-k="rini"></div><div><label>Fim</label><input type="time" value="${d.rfim}" data-i="dr" data-k="rfim"></div></div>`:''}</div>
+    <button class="btn block" data-a="alterSave">${s.estado==='cancelada'?'Marcar reposição':'Cancelar aula'}${d.repo&&s.estado!=='cancelada'?' e marcar reposição':''}</button>`;
+  openSheet(h)}
+function createRepo(from,data,ini,fim){let id=`${data}_${from.turma}_R`,i=2;while(CL().sessions[id])id=`${data}_${from.turma}_R${i++}`;
+  put('sessions',id,{id,data,turma:from.turma,ini,fim,tipo:'reposicao',estado:'prevista',repoe:[from.id],pres:{},plano:'',nota:''});return id}
 
 function repoDraft(fromId,extra){const cd=CD();const sat=(()=>{let d=today();for(let i=0;i<7;i++){if(L.wdOf(d)===6)return d;d=L.addDays(d,1)}return d})();
   const pend=L.pendingCancelled(CL().sessions);const from=fromId?CL().sessions[fromId]:null;
@@ -156,16 +196,23 @@ function renderRepo(){const d=UI.draft,cd=CD();const pend=L.pendingCancelled(CL(
   h+=`<p class="muted sm">Uma reposição com várias turmas cria uma aula por turma, cada uma com o seu plano e as suas presenças. Aberta a toda a turma.</p></div><button class="btn block" data-a="saveRepo">Criar</button>`;openSheet(h)}
 
 /* ---------- ATLETAS ---------- */
+function athDebt(a){const cd=CD(),k=K(),cx=ctx(),M=META(),t=today();const items=[];
+  if(cd.modelo==='gestao')for(const x of L.dueList(cd,cx,k,t.slice(0,7)))if(x.id===a.id)items.push({tipo:'mens',m:x.m,v:x.v});
+  for(const f of Object.values(cx.fees))if(f.ath===a.id&&f.estado==='falta')items.push({tipo:'fee',f,v:L.feeValue(M,f,a,t)});
+  for(const ev of Object.values(cx.events)){const x=ev.atl?.[a.id];if(x&&x.estado==='falta'&&+ev.valor)items.push({tipo:'ev',ev,v:+(x.v??ev.valor)||0})}
+  return{items,total:L.round2(items.reduce((s,x)=>s+x.v,0))}}
 V.atletas=()=>{const u=UI.ath;return `<div class="row gap"><input placeholder="Procurar nome ou nº FNKP" value="${esc(u.q)}" data-i="athQ"><button class="btn" data-a="newAth">+ Novo</button></div>
-  <div class="chips">${[['ins','Inscritos '+seasonLabel(K())],['out','Não inscritos'],['all','Todos']].map(([v,l])=>`<button class="chip ${u.f===v?'on':''}" data-a="athF" data-f="${v}">${l}</button>`).join('')}<button class="chip" data-a="importList">Importar lista</button></div><div id="athList">${athList()}</div>`};
-function athList(){const u=UI.ath,k=K(),cd=CD(),q=u.q.trim().toLowerCase(),m=curMonth(k),cx=ctx();const st=L.attStats(cd,cx,L.seasonRange(k).from,L.seasonRange(k).to,+cd.cfg?.pesoJ||0.2);
-  let as=Object.values(cx.athletes).filter(a=>{const e=L.enr(a,k);if(u.f==='ins'&&!e)return false;if(u.f==='out'&&e)return false;return !q||a.nome.toLowerCase().includes(q)||(a.curto||'').toLowerCase().includes(q)||String(a.fnkp||'').includes(q)}).sort((a,b)=>nameOf(a).localeCompare(nameOf(b)));
-  if(!as.length)return empty(u.f==='ins'?'Ainda ninguém inscrito nesta época. Abre "Não inscritos" para inscrever quem continua, ou adiciona novos.':'Sem resultados.');
+  <div class="chips">${[['ins','Inscritos '+seasonLabel(K())],['deve','Em falta'],['out','Não inscritos'],['all','Todos']].map(([v,l])=>`<button class="chip ${u.f===v?'on':''}" data-a="athF" data-f="${v}">${l}</button>`).join('')}<button class="chip" data-a="importList">Importar lista</button></div><div id="athList">${athList()}</div>`};
+function athList(){const u=UI.ath,k=K(),cd=CD(),q=u.q.trim().toLowerCase(),m=curMonth(k),cx=ctx(),graus=META().graus||[];const st=L.attStats(cd,cx,L.seasonRange(k).from,L.seasonRange(k).to,+cd.cfg?.pesoJ||0.2);
+  const debt={};const D=a=>debt[a.id]||(debt[a.id]=athDebt(a));
+  let as=Object.values(cx.athletes).filter(a=>{const e=L.enr(a,k);if((u.f==='ins'||u.f==='deve')&&!e)return false;if(u.f==='out'&&e)return false;if(u.f==='deve'&&!D(a).total)return false;return !q||a.nome.toLowerCase().includes(q)||(a.curto||'').toLowerCase().includes(q)||String(a.fnkp||'').includes(q)})
+    .sort((a,b)=>graus.indexOf(b.grau)-graus.indexOf(a.grau)||nameOf(a).localeCompare(nameOf(b)));
+  if(!as.length)return empty(u.f==='ins'?'Ainda ninguém inscrito nesta época. Abre "Não inscritos" para inscrever quem continua, ou adiciona novos.':u.f==='deve'?'Ninguém com pagamentos em falta.':'Sem resultados.');
   const row=a=>{const e=L.enr(a,k);const x=st[a.id];const ag=a.nasc?L.ageAt(a.nasc,today()):null;
     const sub=e?[`${L.freqAt(e,m)}×/sem`,ag!=null?ag+' anos':'',x?.pct!=null?'assid. '+Math.round(x.pct*100)+'%':'',e.ate?'saiu '+mShort(e.ate):''].filter(Boolean).join(' · '):[ag!=null?ag+' anos':'',a.fnkp?'FNKP '+a.fnkp:''].filter(Boolean).join(' · ');
-    let tag='';if(e&&cd.modelo==='gestao'){const s=L.monthStatus(cd,a,cx,k,m);tag=s?stTag(s):''}else if(!e)tag=`<button class="btn sm" data-a="quickEnr" data-id="${a.id}">Inscrever</button>`;
-    return `<div class="li" data-a="editAth" data-id="${a.id}"><div class="grow"><div class="nm">${esc(nameOf(a))}${!a.fnkp?' <span class="tag t-warn" style="font-size:10px">FNKP?</span>':''}</div><div class="muted sm">${esc(sub)}</div></div>${tag}</div>`};
-  if(u.f==='ins')return cd.turmas.map(t=>{const g=as.filter(a=>L.enr(a,k).turma===t.id);return g.length?`<div class="list"><div class="gh">${esc(t.nome)} · ${g.length}</div>${g.map(row).join('')}</div>`:''}).join('');
+    let tag='';if(e){const dd=D(a);tag=`<button class="tag ${dd.total?'t-bad':'t-ok'}" style="padding:7px 10px" data-a="openPay" data-id="${a.id}">${dd.total?'Pagamentos em falta':'Pagamentos em dia'}</button>`}else tag=`<button class="btn sm" data-a="quickEnr" data-id="${a.id}">Inscrever</button>`;
+    return `<div class="li" data-a="editAth" data-id="${a.id}"><div class="grow"><div class="nm">${esc(nameOf(a))}${a.grau?` <span class="grau">${esc(a.grau)}</span>`:''}${!a.fnkp?' <span class="tag t-warn" style="font-size:10px">FNKP?</span>':''}</div><div class="muted sm">${esc(sub)}</div></div>${tag}</div>`};
+  if(u.f==='ins'||u.f==='deve')return cd.turmas.map(t=>{const g=as.filter(a=>L.enr(a,k).turma===t.id);return g.length?`<div class="list"><div class="gh">${esc(t.nome)} · ${g.length}</div>${g.map(row).join('')}</div>`:''}).join('');
   return `<div class="list">${as.map(row).join('')}</div>`}
 const ST={pago:['Pago','t-ok'],isento:['Isento','t-mut'],isentoFixo:['Isento fixo','t-mut'],semPres:['Sem presenças','t-mut'],falta:['Em falta','t-bad']};
 const stTag=s=>`<span class="tag ${ST[s.st][1]}">${ST[s.st][0]}</span>`;
@@ -173,40 +220,52 @@ function newEnr(prev,k){const cd=CD();const t=prev?.turma||cd.turmas[0].id;const
   const cur=[...new Set((h?.slots||[]).filter(s=>s.t===t).map(s=>+s.wd))].sort();let dias=cur;
   if(prev?.dias?.length&&cur.length){const out=[];for(const d of [...prev.dias].sort()){const c=cur.includes(d)?d:cur.filter(x=>!out.includes(x)).sort((a,b)=>Math.abs(a-d)-Math.abs(b-d))[0];if(c!=null&&!out.includes(c))out.push(c)}dias=out.sort()}const ep=cd.epocas[k];let desde=today().slice(0,7);if(ep?.meses?.length&&desde<ep.meses[0])desde=ep.meses[0];
   return{turma:t,dias,freq:[{desde,n:prev?L.freqAt(prev,'9999-12'):Math.min(2,dias.length||1)}],isento:!!prev?.isento,desde,ate:'',manual:[]}}
-function athDraft(id){const k=K();const a=id?copy(ctx().athletes[id]):{id:'',fnkp:'',nome:'',nasc:'',curto:'',enc:'',tel:'',canal:'wa',notas:'',grau:'',irmaos:'',irmaoOutra:false,trazidoPor:'',insc:{}};
-  a.insc=a.insc||{};if(!id)a.insc[k]=newEnr(null,k);UI.draft={kind:'ath',isNew:!id,a};UI.sheetLive=null;renderAth()}
-function renderAth(){const{a,isNew}=UI.draft,k=K(),cd=CD(),cx=ctx(),M=META(),e=a.insc[k]||null,m=curMonth(k);
-  const groups=[...new Set(Object.values(cx.athletes).map(x=>x.irmaos).filter(Boolean))];
-  let h=shH(isNew?'Novo atleta':esc(nameOf(a)))+`<div class="card"><label>Nome completo</label><input value="${esc(a.nome)}" data-i="af" data-k="nome">
-  <div class="grid2"><div><label>Nome curto</label><input value="${esc(a.curto)}" placeholder="${esc(L.shortName(a.nome))}" data-i="af" data-k="curto"></div><div><label>Nº FNKP</label><input value="${esc(a.fnkp)}" data-i="af" data-k="fnkp" inputmode="numeric"></div>
-  <div><label>Nascimento</label><input type="date" value="${esc(a.nasc)}" data-c="af" data-k="nasc"></div><div><label>Idade / escalão</label><div class="ro">${a.nasc?L.ageAt(a.nasc,today())+' anos · '+L.escalao(a.nasc,k):'—'}</div></div>
-  <div><label>Encarregado / contacto</label><input value="${esc(a.enc)}" data-i="af" data-k="enc"></div><div><label>Telemóvel</label><input value="${esc(a.tel)}" data-i="af" data-k="tel" inputmode="tel"></div></div>
-  <label>Mensagens por</label><div class="chips">${[['wa','WhatsApp'],['sms','SMS']].map(([v,l])=>`<button class="chip ${(a.canal||'wa')===v?'on':''}" data-a="afCanal" data-v="${v}">${l}</button>`).join('')}${a.tel&&!isNew?`<button class="chip" data-a="contact">Contactar</button>`:''}</div>
-  <div class="grid2"><div><label>Irmãos no karaté (família)</label><input value="${esc(a.irmaos)}" list="grps" data-i="af" data-k="irmaos" placeholder="ex.: Saavedra"><datalist id="grps">${groups.map(g=>`<option>${esc(g)}</option>`).join('')}</datalist></div>
-  <div><label>Irmão noutra modalidade</label><button class="chip ${a.irmaoOutra?'on':''}" style="width:100%;padding:9px" data-a="afTog" data-k="irmaoOutra">${a.irmaoOutra?'Sim':'Não'}</button></div></div>
-  <label>Trazido por (traz um amigo)</label><select data-c="af" data-k="trazidoPor"><option value="">—</option>${Object.values(cx.athletes).filter(x=>x.id!==a.id).sort((x,y)=>nameOf(x).localeCompare(nameOf(y))).map(x=>`<option value="${x.id}" ${a.trazidoPor===x.id?'selected':''}>${esc(nameOf(x))}</option>`).join('')}</select>
-  <label>Graduação</label><select data-c="af" data-k="grau"><option value="">—</option>${(M.graus||[]).map(g=>`<option ${a.grau===g?'selected':''}>${esc(g)}</option>`).join('')}</select>
-  <label>Notas</label><textarea data-i="af" data-k="notas">${esc(a.notas)}</textarea></div>`;
-  h+=`<div class="card"><div class="ch"><h3>Inscrição ${seasonLabel(k)}</h3><button class="chip ${e?'on':''}" data-a="togEnr">${e?'Inscrito':'Não inscrito'}</button></div>`;
-  if(e){h+=`<div class="seg">${cd.turmas.map(t=>`<button class="${e.turma===t.id?'on':''}" data-a="eTurma" data-t="${t.id}">${esc(t.nome)}</button>`).join('')}</div>
-    <label>Dias habituais</label><div class="chips">${[1,2,3,4,5,6].map(w=>`<button class="chip ${(e.dias||[]).includes(w)?'on':''}" data-a="eDia" data-w="${w}">${DOW[w]}</button>`).join('')}</div>
-    <div class="grid2"><div><label>Desde (mês)</label><input type="month" value="${e.desde||''}" data-c="ef" data-k="desde"></div><div><label>Saiu / desistiu em</label><input type="month" value="${e.ate||''}" data-c="ef" data-k="ate"></div></div>`;
-    if(cd.modelo==='gestao'){h+=`<label>Frequência (só muda a pedido)</label>${(e.freq||[]).slice().sort((x,y)=>x.desde<y.desde?-1:1).map((f,i)=>`<div class="srow"><span>desde ${mLabel(f.desde)}</span><b>${f.n}×/semana</b>${e.freq.length>1?`<button class="x" data-a="rmFreq" data-d="${f.desde}">×</button>`:''}</div>`).join('')}
-      <div class="row gap" style="margin-top:6px"><select id="nfN" style="width:auto">${[1,2,3].map(n=>`<option value="${n}">${n}×/semana</option>`).join('')}</select><input type="month" id="nfM" value="${L.addMonths(today().slice(0,7),1)}"><button class="btn sm" data-a="addFreq">Mudar</button></div>
-      <div class="grid2"><div><label>Isento de mensalidade</label><button class="chip ${e.isento?'on':''}" style="width:100%;padding:9px" data-a="eIsento">${e.isento?'Sim':'Não'}</button></div><div></div></div>
-      <label>Valor especial (sobrepõe-se às regras)</label>${(e.manual||[]).map(x=>`<div class="srow"><span>desde ${mLabel(x.desde)} · ${esc(x.nota||'')}</span><b>${x.v===''?'regras':eur(x.v)}</b><button class="x" data-a="rmMan" data-d="${x.desde}">×</button></div>`).join('')}
-      <details><summary>Definir valor especial</summary><div class="row gap"><input type="month" id="vmM" value="${today().slice(0,7)}"><input type="number" step="0.5" id="vmV" placeholder="€" style="width:80px"></div><div class="row gap" style="margin-top:6px"><input id="vmN" placeholder="Motivo"><button class="btn sm" data-a="addMan">OK</button></div><p class="muted sm">Para voltar às regras a partir de um mês, define um valor vazio.</p></details>`;
-      if(!isNew&&cx.athletes[a.id]){const v=L.monthValue(cd,a,cx,k,m);h+=`<p class="sm" style="margin-top:10px">Valor em ${mShort(m).toLowerCase()}: <b>${eur(v.v)}</b>${v.desc.length?' <span class="muted">('+eur(v.base)+' '+v.desc.map(x=>'− '+x[1]+' '+x[0].toLowerCase()).join(' ')+(v.descTot<v.desc.reduce((s,x)=>s+x[1],0)?', máx. '+eur(v.descTot):'')+')</span>':''}${v.manual?' <span class="muted">('+esc(v.manual)+')</span>':''}</p>
-        <div class="mgrid">${(cd.epocas[k].meses||[]).map(mm=>{const s=L.monthStatus(cd,a,cx,k,mm);if(!s)return `<div class="mcell t-mut">${mShort(mm)}<br>—</div>`;const c={pago:'t-ok',falta:mm<=today().slice(0,7)?'t-bad':'t-mut',isento:'t-mut',isentoFixo:'t-mut',semPres:'t-mut'}[s.st];
-          return `<div class="mcell ${c}">${mShort(mm)}<br>${s.st==='pago'?'✓ '+s.v:s.st==='falta'?s.v+'€':s.st==='semPres'?'s/ pres.':'isento'}</div>`}).join('')}</div>`}}}
-  h+='</div>';
-  if(!isNew&&cx.athletes[a.id]){const fees=Object.values(cx.fees).filter(f=>f.ath===a.id).sort((x,y)=>x.ano<y.ano?1:-1);const evs=Object.values(cx.events).filter(ev=>ev.atl?.[a.id]).sort((x,y)=>x.data<y.data?1:-1);
-    if(fees.length||evs.length)h+=`<div class="card"><h3>Quotas e taxas</h3>${fees.map(f=>`<div class="srow"><span>${L.QITEMS.find(q=>q[0]===f.item)[1]} ${f.ano}${f.red?' (red.)':''}</span><span>${eur(L.feeValue(M,f,a,today()))}</span>${feeTag(f.estado)}</div>`).join('')}${evs.map(ev=>`<div class="srow"><span>${esc(ev.nome)} · ${fmtD(ev.data)}${ev.atl[a.id].grau?' · '+esc(ev.atl[a.id].grau):''}</span><span>${eur(ev.atl[a.id].v??ev.valor)}</span>${feeTag(ev.atl[a.id].estado)}</div>`).join('')}</div>`;
-    const pts=L.pointsTable(cd,cx,M,k,'E')[a.id];const rows=Object.keys(cd.epocas).sort().reverse().map(sk=>{const r=L.seasonRange(sk);const x=L.attStats(cd,cx,r.from,r.to,+cd.cfg?.pesoJ||0.2)[a.id];return x?`<div class="srow"><span>${seasonLabel(sk)}</span><span class="muted sm">${x.P} P · ${x.J} J de ${L.fmtNum(x.exp,x.exp%1?1:0)} previstas</span><b>${Math.round(x.pct*100)}%</b></div>`:''}).join('');
+function athDraft(id,tab){const k=K();const a=id?copy(ctx().athletes[id]):{id:'',fnkp:'',nome:'',nasc:'',curto:'',enc:'',tel:'',canal:'wa',notas:'',grau:'',irmaos:'',irmaoOutra:false,trazidoPor:'',insc:{}};
+  a.insc=a.insc||{};if(!id)a.insc[k]=newEnr(null,k);UI.draft={kind:'ath',isNew:!id,a,tab:tab||'dados'};UI.sheetLive=renderAth;renderAth()}
+function renderAth(){if(UI.draft?.kind!=='ath')return;const{a,isNew}=UI.draft,k=K(),cd=CD(),cx=ctx(),M=META(),e=a.insc[k]||null,m=curMonth(k);const tab=UI.draft.tab;
+  const tabs=isNew?[['dados','Dados'],['insc','Inscrição']]:[['dados','Dados'],['insc','Inscrição'],['pag','Pagamentos'],['evo','Evolução']];
+  let h=shH(isNew?'Novo atleta':esc(nameOf(a))+(a.grau?` <span class="grau">${esc(a.grau)}</span>`:''))+`<div class="seg">${tabs.map(([v,l])=>`<button class="${tab===v?'on':''}" data-a="athTab" data-v="${v}">${l}</button>`).join('')}</div>`;
+  if(tab==='dados'){const groups=[...new Set(Object.values(cx.athletes).map(x=>x.irmaos).filter(Boolean))];
+    h+=`<div class="card"><label>Nome completo</label><input value="${esc(a.nome)}" data-i="af" data-k="nome">
+    <div class="grid2"><div><label>Nome curto</label><input value="${esc(a.curto)}" placeholder="${esc(L.shortName(a.nome))}" data-i="af" data-k="curto"></div><div><label>Nº FNKP</label><input value="${esc(a.fnkp)}" data-i="af" data-k="fnkp" inputmode="numeric"></div>
+    <div><label>Nascimento</label><input type="date" value="${esc(a.nasc)}" data-c="af" data-k="nasc"></div><div><label>Idade / escalão</label><div class="ro">${a.nasc?L.ageAt(a.nasc,today())+' anos · '+L.escalao(a.nasc,k):'—'}</div></div>
+    <div><label>Encarregado / contacto</label><input value="${esc(a.enc)}" data-i="af" data-k="enc"></div><div><label>Telemóvel</label><input value="${esc(a.tel)}" data-i="af" data-k="tel" inputmode="tel"></div></div>
+    <label>Mensagens por</label><div class="chips">${[['wa','WhatsApp'],['sms','SMS']].map(([v,l])=>`<button class="chip ${(a.canal||'wa')===v?'on':''}" data-a="afCanal" data-v="${v}">${l}</button>`).join('')}${a.tel&&!isNew?`<button class="chip" data-a="contact">Contactar</button>`:''}</div>
+    <div class="grid2"><div><label>Irmãos no karaté (família)</label><input value="${esc(a.irmaos)}" list="grps" data-i="af" data-k="irmaos" placeholder="ex.: Saavedra"><datalist id="grps">${groups.map(g=>`<option>${esc(g)}</option>`).join('')}</datalist></div>
+    <div><label>Irmão noutra modalidade</label><button class="chip ${a.irmaoOutra?'on':''}" style="width:100%;padding:9px" data-a="afTog" data-k="irmaoOutra">${a.irmaoOutra?'Sim':'Não'}</button></div></div>
+    <label>Trazido por (traz um amigo)</label><select data-c="af" data-k="trazidoPor"><option value="">—</option>${Object.values(cx.athletes).filter(x=>x.id!==a.id).sort((x,y)=>nameOf(x).localeCompare(nameOf(y))).map(x=>`<option value="${x.id}" ${a.trazidoPor===x.id?'selected':''}>${esc(nameOf(x))}</option>`).join('')}</select>
+    <label>Graduação</label><select data-c="af" data-k="grau"><option value="">—</option>${(M.graus||[]).map(g=>`<option ${a.grau===g?'selected':''}>${esc(g)}</option>`).join('')}</select>
+    <label>Notas</label><textarea data-i="af" data-k="notas">${esc(a.notas)}</textarea></div>`}
+  if(tab==='insc'){h+=`<div class="card"><div class="ch"><h3>Inscrição ${seasonLabel(k)}</h3><button class="chip ${e?'on':''}" data-a="togEnr">${e?'Inscrito':'Não inscrito'}</button></div>`;
+    if(e){h+=`<div class="seg">${cd.turmas.map(t=>`<button class="${e.turma===t.id?'on':''}" data-a="eTurma" data-t="${t.id}">${esc(t.nome)}</button>`).join('')}</div>
+      <label>Dias habituais</label><div class="chips">${[1,2,3,4,5,6].map(w=>`<button class="chip ${(e.dias||[]).includes(w)?'on':''}" data-a="eDia" data-w="${w}">${DOW[w]}</button>`).join('')}</div>
+      <div class="grid2"><div><label>Desde (mês)</label><input type="month" value="${e.desde||''}" data-c="ef" data-k="desde"></div><div><label>Saiu / desistiu em</label><input type="month" value="${e.ate||''}" data-c="ef" data-k="ate"></div></div>`;
+      if(cd.modelo==='gestao'){h+=`<label>Frequência (só muda a pedido)</label>${(e.freq||[]).slice().sort((x,y)=>x.desde<y.desde?-1:1).map(f=>`<div class="srow"><span>desde ${mLabel(f.desde)}</span><b>${f.n}×/semana</b>${e.freq.length>1?`<button class="x" data-a="rmFreq" data-d="${f.desde}">×</button>`:''}</div>`).join('')}
+        <div class="row gap" style="margin-top:6px"><select id="nfN" style="width:auto">${[1,2,3].map(n=>`<option value="${n}">${n}×/semana</option>`).join('')}</select><input type="month" id="nfM" value="${L.addMonths(today().slice(0,7),1)}"><button class="btn sm" data-a="addFreq">Mudar</button></div>
+        <div class="grid2"><div><label>Isento de mensalidade</label><button class="chip ${e.isento?'on':''}" style="width:100%;padding:9px" data-a="eIsento">${e.isento?'Sim':'Não'}</button></div><div></div></div>
+        <label>Valor especial (sobrepõe-se às regras)</label>${(e.manual||[]).map(x=>`<div class="srow"><span>desde ${mLabel(x.desde)} · ${esc(x.nota||'')}</span><b>${x.v===''?'regras':eur(x.v)}</b><button class="x" data-a="rmMan" data-d="${x.desde}">×</button></div>`).join('')}
+        <details><summary>Definir valor especial</summary><div class="row gap"><input type="month" id="vmM" value="${today().slice(0,7)}"><input type="number" step="0.5" id="vmV" placeholder="€" style="width:80px"></div><div class="row gap" style="margin-top:6px"><input id="vmN" placeholder="Motivo"><button class="btn sm" data-a="addMan">OK</button></div><p class="muted sm">Para voltar às regras a partir de um mês, define um valor vazio.</p></details>`;
+        if(!isNew&&cx.athletes[a.id]){const v=L.monthValue(cd,a,cx,k,m);h+=`<p class="sm" style="margin-top:10px">Valor em ${mShort(m).toLowerCase()}: <b>${eur(v.v)}</b>${v.desc.length?' <span class="muted">('+eur(v.base)+' '+v.desc.map(x=>'− '+x[1]+' '+x[0].toLowerCase()).join(' ')+(v.descTot<v.desc.reduce((s,x)=>s+x[1],0)?', máx. '+eur(v.descTot):'')+')</span>':''}${v.manual?' <span class="muted">('+esc(v.manual)+')</span>':''}</p>`}}}
+    h+='</div>'}
+  if(tab==='pag'&&!isNew&&cx.athletes[a.id]){const A0=cx.athletes[a.id];const dd=athDebt(A0);
+    h+=`<div class="card ${dd.total?'banner':''}"><div class="ch"><div><small class="muted">Em atraso</small><div style="font-size:22px;font-weight:700;color:${dd.total?'var(--bad)':'var(--ok)'}">${dd.total?eur(dd.total):'Em dia'}</div></div>${dd.items.some(x=>x.tipo==='mens')?`<button class="btn sm ghost ${A0.lemb?'sent':''}" data-a="remindA" data-id="${a.id}">${A0.lemb?'Lembrado '+fmtD(A0.lemb).slice(0,5):'Lembrar'}</button>`:''}</div></div>`;
+    if(cd.modelo==='gestao'&&L.enr(A0,k)){const ms=(cd.epocas[k].meses||[]);const rows=ms.map(mm=>({mm,s:L.monthStatus(cd,A0,cx,k,mm)})).filter(x=>x.s);
+      const lastPaid=rows.filter(x=>x.s.st==='pago').map(x=>({m:x.mm,d:x.s.d})).sort((x,y)=>(x.d||'')<(y.d||'')?1:-1)[0];const sent=lastPaid&&cx.payments[lastPaid.m]?.[a.id]?.msg;
+      h+=`<div class="ch" style="margin-top:6px"><h3>Mensalidades ${seasonLabel(k)}</h3>${dd.items.some(x=>x.tipo==='mens')?'<button class="btn sm" data-a="payAll" data-id="'+a.id+'">Pagar todos em falta</button>':''}</div>
+        <div class="list">${rows.map(({mm,s})=>{const sub=s.st==='pago'?`${eur(s.v)}${s.d?' · pago a '+fmtD(s.d):''}`:s.v!=null?eur(s.v)+(s.val?.desc?.length?' · '+s.val.desc.map(x=>x[0]).join(', ').toLowerCase():''):'';
+          return `<div class="li"><div class="grow"><div class="nm">${mLabel(mm)}</div><div class="muted sm" ${s.st==='pago'?`data-a="payVal" data-id="${a.id}" data-m="${mm}"`:''}>${sub}</div></div><button class="tag ${ST[s.st][1]}" style="padding:7px 11px" data-a="payCycle" data-id="${a.id}" data-m="${mm}">${ST[s.st][0]}</button></div>`}).join('')}</div>
+        ${lastPaid?`<button class="btn block mail ${sent?'sent':''}" data-a="payMsg" data-id="${a.id}" data-m="${lastPaid.m}">${sent?'✉✓ Confirmação enviada · reenviar':'✉ Enviar confirmação do último pagamento'}</button>`:''}
+        <p class="muted sm">Toca no estado de cada mês: Em falta → Pago → Isento. Toca no valor pago para o corrigir.</p>`}
+    const fees=Object.values(cx.fees).filter(f=>f.ath===a.id).sort((x,y)=>x.ano<y.ano?1:-1);const evs=Object.values(cx.events).filter(ev=>ev.atl?.[a.id]).sort((x,y)=>x.data<y.data?1:-1);
+    if(fees.length||evs.length){const anyC=fees.some(f=>f.estado==='cobrado');
+      h+=`<h3 style="margin:14px 0 8px">Quotas, seguro e eventos</h3><div class="list">${fees.map(f=>`<div class="li"><div class="grow"><div class="nm">${L.QITEMS.find(q=>q[0]===f.item)[1]} ${f.ano}${f.red?' (red.)':''}</div><div class="muted sm">${eur(L.feeValue(M,f,A0,today()))}${f.dCob?' · cobrado a '+fmtD(f.dCob):''}</div></div><button class="tag ${f.estado==='entregue'?'t-ok':f.estado==='cobrado'?'t-blue':'t-bad'}" style="padding:7px 11px" data-a="feeCycle" data-id="${f.id}">${f.estado==='entregue'?'Entregue':f.estado==='cobrado'?'Cobrado':'Em falta'}</button></div>`).join('')}
+        ${evs.map(ev=>{const x=ev.atl[a.id];return `<div class="li"><div class="grow"><div class="nm">${esc(ev.nome)}</div><div class="muted sm">${fmtD(ev.data)} · ${eur(x.v??ev.valor)}${x.grau?' · '+esc(x.grau):''}</div></div>${+ev.valor?`<button class="tag ${x.estado==='entregue'?'t-ok':x.estado==='cobrado'?'t-blue':'t-bad'}" style="padding:7px 11px" data-a="evCycleA" data-ev="${ev.id}" data-id="${a.id}">${x.estado==='entregue'?'Entregue':x.estado==='cobrado'?'Cobrado':'Em falta'}</button>`:'<span class="tag t-mut">Participa</span>'}</div>`}).join('')}</div>
+        ${anyC?`<button class="btn block mail" data-a="feeMsgA" data-id="${a.id}">✉ Enviar confirmação das quotas</button>`:''}`}}
+  if(tab==='evo'&&!isNew&&cx.athletes[a.id]){const pts=L.pointsTable(cd,cx,M,k,'E')[a.id];const rows=Object.keys(cd.epocas).sort().reverse().map(sk=>{const r=L.seasonRange(sk);const x=L.attStats(cd,cx,r.from,r.to,+cd.cfg?.pesoJ||0.2)[a.id];return x?`<div class="srow"><span>${seasonLabel(sk)}</span><span class="muted sm">${x.P} P · ${x.J} J de ${L.fmtNum(x.exp,x.exp%1?1:0)} previstas</span><b>${Math.round(x.pct*100)}%</b></div>`:''}).join('');
     h+=`<div class="card"><h3>Assiduidade e pontos</h3>${rows||'<div class="muted sm">Sem registos.</div>'}${pts?`<div class="srow"><span>Pontos ${seasonLabel(k)}</span><span class="muted sm">assid. ${pts.assid} · prémios ${pts.prem} · eventos ${pts.ev}</span><b>${pts.tot}</b></div>`:''}</div>`;
     const charts=(M.tests||[]).map(t=>{const hs=L.testHistory(cx.tests,a.id,t.id).map(x=>({d:x.data,v:L.bestOf(t,x.r)})).filter(x=>x.v!=null);return hs.length?`<div class="tchart"><div class="sm"><b>${esc(t.nome)}</b> <span class="muted">${esc(t.un)}</span></div>${spark(hs,t)}</div>`:''}).join('');
-    if(charts)h+=`<div class="card"><h3>Testes físicos</h3>${charts}</div>`}
-  h+=`<button class="btn block" data-a="saveAth">Guardar</button>${isNew?'':'<button class="btn danger block" data-a="delAth">Apagar atleta</button>'}`;
+    h+=`<div class="card"><h3>Testes físicos</h3>${charts||'<div class="muted sm">Sem testes registados.</div>'}</div>`}
+  if(tab==='dados'||tab==='insc')h+=`<button class="btn block" data-a="saveAth">Guardar</button>${isNew||tab!=='dados'?'':'<button class="btn danger block" data-a="delAth">Apagar atleta</button>'}`;
   const b=$('#sheetBody'),sc=b.scrollTop;openSheet(h);b.scrollTop=sc}
 const feeTag=s=>`<span class="tag ${s==='entregue'?'t-ok':s==='cobrado'?'t-blue':'t-bad'}">${s==='entregue'?'Entregue':s==='cobrado'?'Cobrado':'Em falta'}</span>`;
 function spark(pts,t){const W=300,H=70,P=16;const vs=pts.map(p=>p.v);let mn=Math.min(...vs),mx=Math.max(...vs);if(mn===mx){mn-=1;mx+=1}
@@ -221,23 +280,64 @@ function renderImp(){const d=UI.draft,rows=L.parseAthleteList(d.text);
   <div id="impPrev" class="muted sm">${rows.length} atleta(s) reconhecido(s)</div></div><button class="btn block" data-a="doImport">Importar</button>`)}
 
 /* ---------- CONTAS ---------- */
-V.contas=()=>{const cd=CD();const opts=cd.modelo==='gestao'?[['mens','Mensalidades'],['poup',cd.cfg?.poupNome||'Poupança'],['quotas','Quotas e taxas']]:[['rem','Remuneração'],['quotas','Quotas e taxas']];
+V.contas=()=>{const cd=CD();const opts=cd.modelo==='gestao'?[['mens','Mês'],['epoca','Época'],['poup',cd.cfg?.poupNome||'Poupança'],['quotas','Quotas e taxas'],['todos','Todos os clubes']]:[['rem','Remuneração'],['lot','Lotação'],['quotas','Quotas e taxas'],['todos','Todos os clubes']];
   if(!opts.find(o=>o[0]===UI.con.v))UI.con.v=opts[0][0];
-  return `<div class="seg">${opts.map(([v,l])=>`<button class="${UI.con.v===v?'on':''}" data-a="conV" data-v="${v}">${esc(l)}</button>`).join('')}</div>`+CV[UI.con.v]()};
+  return `<div class="chips">${opts.map(([v,l])=>`<button class="chip ${UI.con.v===v?'on':''}" data-a="conV" data-v="${v}">${esc(l)}</button>`).join('')}</div>`+CV[UI.con.v]()};
 const CV={};
+function ctxOf(cid){const c=DB.clubs[cid];return{athletes:c.athletes,sessions:c.sessions,payments:c.payments,receitas:c.receitas,fees:c.fees,events:c.events,ledger:c.ledger,awards:c.awards,tests:c.tests,mp:L.monthPres(c.sessions)}}
+function slotStats(){const cd=CD(),k=K(),m=curMonth(k);const h=L.hist(cd.horarios,today())||cd.horarios?.[cd.horarios.length-1];
+  return (h?.slots||[]).slice().sort((a,b)=>(+a.wd||7)-(+b.wd||7)||(a.ini<b.ini?-1:1)).map(s=>{const n=athsIn(k,s.t,m).filter(a=>(L.enr(a,k).dias||[]).includes(+s.wd)).length;const lot=+s.lot||0;return{s,n,lot,vagas:lot?lot-n:null}})}
+function capacity(){const cd=CD(),k=K(),m=curMonth(k),cx=ctx();const sl=slotStats();const byT={};
+  for(const x of sl){const t=byT[x.s.t]||(byT[x.s.t]={seats:0,ok:true});if(!x.lot)t.ok=false;t.seats+=x.lot}
+  let cap=0,ok=true;for(const t of cd.turmas){const st=byT[t.id];if(!st){continue}if(!st.ok)ok=false;const as=athsIn(k,t.id,m);const fm=as.length?as.reduce((s,a)=>s+L.freqAt(L.enr(a,k),m),0)/as.length:2;cap+=st.seats/Math.max(1,Math.min(fm,(sl.filter(x=>x.s.t===t.id).length)||1))}
+  const now=athsIn(k,'',m).length;
+  let avg=0;if(cd.modelo==='gestao'){const ms=(cd.epocas[k].meses||[]).filter(x=>x<=today().slice(0,7)).reverse();for(const mm of ms){const p=cx.payments[mm]||{};const v=Object.values(p).filter(x=>x.s==='P');if(v.length){avg=v.reduce((s,x)=>s+(+x.v||0),0)/v.length;break}}if(!avg){const vv=L.hist(cd.cfg?.valores,today().slice(0,7))||{};avg=+vv[2]||0}}else avg=+cd.cfg?.valorAluno||0;
+  return{sl,cap:Math.round(cap),ok,now,avg:L.round2(avg)}}
+function lotCard(){const cd=CD();const c=capacity();if(!c.sl.length)return '';
+  const pct=+L.hist(cd.cfg?.pctEspaco,today().slice(0,7))?.v||0;const ges=cd.modelo==='gestao';const recNow=c.now*c.avg,recCap=c.cap*c.avg;
+  return `<div class="card"><div class="ch"><h3>Lotação por treino</h3><button class="btn sm ghost" data-a="simOpen">Simulador</button></div>
+    <table class="tbl"><thead><tr><th>Treino</th><th>Alunos</th><th>Lotação</th><th>Vagas</th></tr></thead><tbody>${c.sl.map(x=>`<tr><td>${DOW[+x.s.wd]} · ${esc(turma(x.s.t).nome)}</td><td>${x.n}</td><td>${x.lot||'—'}</td><td style="font-weight:700;color:${x.vagas==null?'inherit':x.vagas<=0?'var(--bad)':'var(--ok)'}">${x.vagas==null?'—':x.vagas}</td></tr>`).join('')}</tbody></table>
+    ${c.ok?`<p class="sm" style="margin-top:10px">Com a sala cheia cabem cerca de <b>${c.cap} alunos</b> (hoje: ${c.now}). Mensalidade média real: ${eur(c.avg)}.</p>
+    <table class="tbl"><thead><tr><th></th><th>Hoje</th><th>Sala cheia</th></tr></thead><tbody><tr><td>Receita/mês</td><td>${eur(recNow)}</td><td>${eur(recCap)}</td></tr>
+    ${ges?`<tr><td>${esc(cd.cfg?.entNome||'Espaço')} (${pct}%)</td><td>${eur(recNow*pct/100)}</td><td>${eur(recCap*pct/100)}</td></tr><tr><td>Treinador</td><td>${eur(recNow*(1-pct/100))}</td><td>${eur(recCap*(1-pct/100))}</td></tr>`:''}</tbody></table>
+    <p class="muted sm">Estimativa: a média real já inclui descontos, irmãos e isentos.${ges?' Antes da poupança mensal.':''}</p>`:`<p class="muted sm">Define a lotação de cada treino em Mais → Definições do clube → Horários para ver as vagas e a receita com a sala cheia.</p>`}</div>`}
+CV.lot=()=>lotCard();
 CV.mens=()=>{const cd=CD(),k=K(),cx=ctx(),ep=cd.epocas[k];if(!UI.con.m||!ep.meses.includes(UI.con.m))UI.con.m=curMonth(k);const m=UI.con.m;const f=L.finGestao(cd,cx,k,m);const en=esc(cd.cfg?.entNome||'Espaço');
-  let h=`<select data-c="conM">${ep.meses.map(x=>`<option value="${x}" ${x===m?'selected':''}>${mLabel(x)}</option>`).join('')}</select>
-  <div class="kpis" style="margin-top:10px"><div class="kpi"><small>Recebido</small><b>${eur(f.rec)}</b></div><div class="kpi"><small>Em falta até ${mShort(m)}</small><b style="color:${f.due?'var(--bad)':'inherit'}">${eur(f.due)}</b></div>
-  <div class="kpi"><small>Pagar ${en} (${f.pct}%)</small><b>${eur(f.ent)}</b><small>c/ em falta ${eur(f.ent+f.dueEnt)}</small></div><div class="kpi"><small>Treinador</small><b>${eur(f.tr)}</b><small>c/ em falta ${eur(f.tr+f.dueTr)}</small></div></div>`;
-  const as=Object.values(cx.athletes).map(a=>({a,s:L.monthStatus(cd,a,cx,k,m)})).filter(x=>x.s).sort((x,y)=>nameOf(x.a).localeCompare(nameOf(y.a)));
-  const paid=as.filter(x=>x.s.st==='pago').length,toPay=as.filter(x=>['pago','falta'].includes(x.s.st)).length;
-  h+=`<div class="ch"><h3>${mLabel(m)}</h3><span class="muted sm">${paid} pagos de ${toPay}</span></div>`;
-  h+=as.length?`<div class="list">${as.map(({a,s})=>{const sub=s.st==='pago'?`${eur(s.v)}${s.d?' · '+fmtD(s.d):''}`:s.v!=null?`${eur(s.v)}${s.val?.desc?.length?' · '+s.val.desc.map(x=>x[0]).join(', ').toLowerCase():''}`:'';
-    return `<div class="li"><div class="grow"><div class="nm">${esc(nameOf(a))}</div><div class="muted sm" ${s.st==='pago'?`data-a="payVal" data-id="${a.id}" data-m="${m}"`:''}>${sub}</div></div>${s.st==='pago'?`<button class="btn sm ghost" data-a="payMsg" data-id="${a.id}" data-m="${m}" aria-label="Enviar confirmação">✉</button>`:''}<button class="tag ${ST[s.st][1]}" style="padding:7px 11px" data-a="payCycle" data-id="${a.id}" data-m="${m}">${ST[s.st][0]}</button></div>`}).join('')}</div>`:empty('Sem atletas inscritos neste mês.');
-  h+=`<p class="muted sm">Toca no estado: Em falta → Pago → Isento. Quem não teve nenhuma presença no mês fica “Sem presenças” e não paga. ✉ envia a confirmação ao encarregado.</p>`;
-  const due=L.dueList(cd,cx,k,m).filter(x=>x.m!==m);const g={};due.forEach(x=>(g[x.id]=g[x.id]||[]).push(x));
-  if(Object.keys(g).length)h+=`<h3 style="margin:16px 0 8px">Em atraso de meses anteriores</h3><div class="list">${Object.keys(g).map(id=>`<div class="li"><div class="grow"><div class="nm">${esc(N(id))}</div><div class="muted sm">${g[id].map(x=>mShort(x.m)).join(', ')} · ${eur(g[id].reduce((s,x)=>s+x.v,0))}</div></div><button class="btn sm ghost" data-a="remind" data-id="${id}">Lembrar</button></div>`).join('')}</div>`;
-  return h};
+  const ids=[...new Set(L.dueList(cd,cx,k,m).map(x=>x.id))];
+  return `<select data-c="conM">${ep.meses.map(x=>`<option value="${x}" ${x===m?'selected':''}>${mLabel(x)}</option>`).join('')}</select>
+  <div class="kpis" style="margin-top:10px"><div class="kpi"><small>Recebido</small><b>${eur(f.rec)}</b></div><div class="kpi" data-a="goDeve" style="cursor:pointer"><small>Em falta até ${mShort(m)}</small><b style="color:${f.due?'var(--bad)':'inherit'}">${eur(f.due)}</b><small>${ids.length} atleta(s) · ver ›</small></div>
+  <div class="kpi"><small>Pagar ${en} (${f.pct}%)</small><b>${eur(f.ent)}</b><small>c/ em falta ${eur(f.ent+f.dueEnt)}</small></div><div class="kpi"><small>Treinador</small><b>${eur(f.tr)}</b><small>c/ em falta ${eur(f.tr+f.dueTr)}</small></div></div>
+  <p class="muted sm">Os pagamentos registam-se em Atletas → Pagamentos de cada atleta.</p>`+lotCard()};
+CV.epoca=()=>{const cd=CD(),k=K(),cx=ctx(),ep=cd.epocas[k];const now=today().slice(0,7);const ms=(ep.meses||[]).filter(m=>m<=now);let T={rec:0,ent:0,tr:0,poup:0};
+  const rows=ms.map(m=>{const f=L.finGestao(cd,cx,k,m);T.rec+=f.rec;T.ent+=f.ent;T.tr+=f.tr;T.poup+=f.poup;return `<tr><td>${mShort(m)}</td><td>${eur(f.rec)}</td><td>${eur(f.ent)}</td><td>${eur(f.tr)}</td><td>${eur(f.poup)}</td></tr>`});
+  return `<div class="card"><h3>Época ${seasonLabel(k)} até ${mShort(now).toLowerCase()}</h3><div class="tscroll"><table class="tbl"><thead><tr><th>Mês</th><th>Recebido</th><th>${esc(cd.cfg?.entNome||'Espaço')}</th><th>Treinador</th><th>Poupança</th></tr></thead><tbody>${rows.join('')}
+    <tr class="tot"><td>Total</td><td>${eur(T.rec)}</td><td>${eur(T.ent)}</td><td>${eur(T.tr)}</td><td>${eur(T.poup)}</td></tr></tbody></table></div></div>`};
+CV.todos=()=>{const now=today().slice(0,7);let tm=0,te=0;const rows=Object.values(DB.clubs).filter(c=>c.doc).sort((a,b)=>a.doc.nome.localeCompare(b.doc.nome)).map(c=>{const cd=c.doc,cx=ctxOf(cd.id);const k=Object.keys(cd.epocas||{}).includes(L.seasonOf(today()))?L.seasonOf(today()):Object.keys(cd.epocas||{}).sort().pop();if(!k)return '';
+    const ms=(cd.epocas[k].meses||[]).filter(m=>m<=now);let mes=0,ep=0,est=false;
+    for(const m of ms){let v;if(cd.modelo==='gestao')v=L.finGestao(cd,cx,k,m).tr;else{const x=L.profMonth(cd,cx,k,m);v=x.rec!=null?x.rec:x.prev;if(x.rec==null)est=true}ep+=v;if(m===now)mes=v}
+    tm+=mes;te+=ep;return `<tr><td>${esc(cd.nome)}${est?' *':''}</td><td>${eur(mes)}</td><td>${eur(ep)}</td></tr>`});
+  return `<div class="card"><h3>O que recebes de cada clube</h3><table class="tbl"><thead><tr><th>Clube</th><th>${mShort(now)}</th><th>Época</th></tr></thead><tbody>${rows.join('')}<tr class="tot"><td>Total</td><td>${eur(tm)}</td><td>${eur(te)}</td></tr></tbody></table>
+    <p class="muted sm">No Cart, a tua parte depois do espaço e da poupança. No Flexgym, o valor recebido; * inclui meses ainda por registar, contados pelo previsto.</p></div>`};
+function simDraft(){const cd=CD(),k=K(),m=curMonth(k),cx=ctx();const c=capacity();const ges=cd.modelo==='gestao';
+  if(ges){const vv=L.hist(cd.cfg?.valores,today().slice(0,7))||{};const as=athsIn(k,'',m);const pay=as.filter(a=>!L.enr(a,k).isento);const n1=pay.filter(a=>L.freqAt(L.enr(a,k),m)===1).length,n2=pay.length-n1;
+    const base=n1*(+vv[1]||0)+n2*(+vv[2]||0);const desc=pay.length&&c.avg?Math.max(0,L.round2((base-c.avg*pay.length)/pay.length)):0;
+    UI.draft={kind:'sim',ges,pct:+L.hist(cd.cfg?.pctEspaco,today().slice(0,7))?.v||0,v1:+vv[1]||0,v2:+vv[2]||0,poup:+L.hist(cd.cfg?.poupMensal,today().slice(0,7))?.v||0,share:+cd.cfg?.poupShare||0,n1,n2,desc,meses:(cd.epocas[k].meses||[]).length,cap:c.ok?c.cap:null}}
+  else UI.draft={kind:'sim',ges,n:athsIn(k,'',m).length,va:+cd.cfg?.valorAluno||0,vl:+cd.cfg?.valorAula||0,aulas:Math.round(slotDays()*4.33),meses:(cd.epocas[k].meses||[]).length,cap:c.ok?c.cap:null};
+  UI.draft.base=copy(UI.draft);UI.sheetLive=null;renderSim()}
+function slotDays(){const h=L.hist(CD().horarios,today())||CD().horarios?.[0];return new Set((h?.slots||[]).map(s=>+s.wd)).size}
+function simCalc(d){if(d.ges){const rec=Math.max(0,d.n1*(d.v1-d.desc)+d.n2*(d.v2-d.desc));const ent=rec*d.pct/100-d.poup*d.share/100,tr=rec*(1-d.pct/100)-d.poup*(1-d.share/100);return{rec,ent,tr,poup:d.poup}}
+  return{alu:d.n*d.va,aula:d.aulas*d.vl}}
+function renderSim(){const d=UI.draft,b=d.base;const f=(k,l,st)=>`<div><label>${l}</label><input type="number" step="${st||1}" value="${d[k]}" data-i="sim" data-k="${k}"></div>`;
+  let h=shH('Simulador')+`<p class="muted sm" style="margin-top:-6px">Muda os valores e compara com a situação atual. Nada aqui altera os dados reais.</p><div class="card"><div class="grid2">`;
+  if(d.ges)h+=f('pct','% para o espaço')+f('poup','Poupança mensal (€)',0.5)+f('v1','Mensalidade 1×/sem (€)',0.5)+f('v2','Mensalidade 2×/sem (€)',0.5)+f('n1','Alunos 1×/sem')+f('n2','Alunos 2×/sem')+f('desc','Desconto médio por aluno (€)',0.5)+f('meses','Meses cobrados');
+  else h+=f('n','Alunos')+f('va','Valor por aluno (€)',0.5)+f('aulas','Aulas por mês')+f('vl','Valor por aula (€)',0.5)+f('meses','Meses');
+  h+=`</div>${d.cap!=null?`<p class="muted sm">Com a sala cheia cabem cerca de ${d.cap} alunos.${d.ges&&d.n1+d.n2>d.cap?' <b style="color:var(--bad)">Acima da lotação.</b>':''}${!d.ges&&d.n>d.cap?' <b style="color:var(--bad)">Acima da lotação.</b>':''}</p>`:''}</div><div id="simRes">${simRes()}</div>
+   <button class="btn ghost block" data-a="simReset">Repor valores atuais</button>`;openSheet(h)}
+function simRes(){const d=UI.draft,a=simCalc(d.base),s=simCalc(d);const dlt=(x,y)=>{const v=L.round2(y-x);return v?`<span style="color:${v>0?'var(--ok)':'var(--bad)'}">${v>0?'+':''}${eur(v)}</span>`:'='};
+  if(d.ges)return `<table class="tbl"><thead><tr><th>Por mês</th><th>Atual</th><th>Simulado</th><th>Dif.</th></tr></thead><tbody>${[['Receita','rec'],['Espaço','ent'],['Treinador','tr'],['Poupança','poup']].map(([l,k])=>`<tr><td>${l}</td><td>${eur(a[k])}</td><td><b>${eur(s[k])}</b></td><td>${dlt(a[k],s[k])}</td></tr>`).join('')}
+    <tr class="tot"><td>Treinador na época</td><td>${eur(a.tr*d.base.meses)}</td><td>${eur(s.tr*d.meses)}</td><td>${dlt(a.tr*d.base.meses,s.tr*d.meses)}</td></tr><tr class="tot"><td>Espaço na época</td><td>${eur(a.ent*d.base.meses)}</td><td>${eur(s.ent*d.meses)}</td><td>${dlt(a.ent*d.base.meses,s.ent*d.meses)}</td></tr></tbody></table>`;
+  return `<table class="tbl"><thead><tr><th>Por mês</th><th>Atual</th><th>Simulado</th><th>Dif.</th></tr></thead><tbody><tr><td>Por aluno</td><td>${eur(a.alu)}</td><td><b>${eur(s.alu)}</b></td><td>${dlt(a.alu,s.alu)}</td></tr><tr><td>Por aula</td><td>${eur(a.aula)}</td><td><b>${eur(s.aula)}</b></td><td>${dlt(a.aula,s.aula)}</td></tr>
+    <tr class="tot"><td>Época por aluno</td><td>${eur(a.alu*d.base.meses)}</td><td>${eur(s.alu*d.meses)}</td><td>${dlt(a.alu*d.base.meses,s.alu*d.meses)}</td></tr><tr class="tot"><td>Época por aula</td><td>${eur(a.aula*d.base.meses)}</td><td>${eur(s.aula*d.meses)}</td><td>${dlt(a.aula*d.base.meses,s.aula*d.meses)}</td></tr></tbody></table>`}
 CV.poup=()=>{const cd=CD(),k=K(),p=L.poupanca(cd,ctx(),k);
   let h=`<div class="kpis"><div class="kpi"><small>Saldo</small><b>${eur(p.saldo)}</b><small>início da época ${eur(p.ini)}</small></div><div class="kpi"><small>Entradas (${eur(+L.hist(cd.cfg.poupMensal,today().slice(0,7))?.v||0)}/mês)</small><b>${eur(p.ent)}</b></div>
    <div class="kpi"><small>Saídas</small><b>${eur(p.said+p.reemb)}</b></div><div class="kpi"><small>A reembolsar-te</small><b style="color:${p.pend>0?'var(--warn)':'inherit'}">${eur(p.pend)}</b></div></div>
@@ -263,7 +363,7 @@ CV.quotas=()=>{const cx=ctx(),M=META(),t=today(),ms=L.moneySummary(M,cx,t);
     const fees=Object.values(cx.fees).filter(f=>f.ano===Y);const by={};fees.forEach(f=>(by[f.ath]=by[f.ath]||{})[f.item]=f);
     const ids=Object.keys(by).sort((a,b)=>N(a).localeCompare(N(b)));
     h+=ids.length?`<div class="list" style="margin-top:10px">${ids.map(id=>{const a=cx.athletes[id];const any=Object.values(by[id]).some(f=>f.estado==='cobrado');
-      return `<div class="li"><div class="grow"><div class="nm">${esc(N(id))}</div><div class="qchips">${L.QITEMS.map(([it,l])=>{const f=by[id][it];if(!f)return '';return `<button class="tag ${f.estado==='entregue'?'t-ok':f.estado==='cobrado'?'t-blue':'t-bad'}" data-a="feeCycle" data-id="${f.id}">${l.slice(0,3)}${f.red?'·r':''} ${L.fmtNum(L.feeValue(M,f,a,t),2)}€</button>`}).join('')}</div></div>${any?`<button class="btn sm ghost" data-a="feeMsg" data-id="${id}" data-y="${Y}">✉</button>`:''}</div>`}).join('')}</div>
+      return `<div class="li"><div class="grow"><div class="nm">${esc(N(id))}</div><div class="qchips">${L.QITEMS.map(([it,l])=>{const f=by[id][it];if(!f)return '';return `<button class="tag ${f.estado==='entregue'?'t-ok':f.estado==='cobrado'?'t-blue':'t-bad'}" data-a="feeCycle" data-id="${f.id}">${l.slice(0,3)}${f.red?'·r':''} ${L.fmtNum(L.feeValue(M,f,a,t),2)}€</button>`}).join('')}</div></div>${any?(()=>{const sent=Object.values(by[id]).some(f=>f.estado==='cobrado'&&f.msg);return `<button class="btn sm ghost ${sent?'sent':''}" data-a="feeMsg" data-id="${id}" data-y="${Y}">${sent?'✉✓':'✉'}</button>`})():''}</div>`}).join('')}</div>
       <button class="btn ghost block" data-a="deliverAll" data-y="${Y}">Marcar todos os cobrados como entregues</button>`:empty(`Sem quotas de ${Y}. Usa “Gerar ${Y}” para criar as quotas dos atletas inscritos.`);
     h+=`<p class="muted sm">Toca em cada quota: Em falta → Cobrado → Entregue. Infantil até aos 9 anos (idade no dia da cobrança). “r” = valor reduzido de quem entrou entre setembro e dezembro.</p>`}
   else{const evs=Object.values(cx.events).sort((a,b)=>a.data<b.data?1:-1);
@@ -291,19 +391,34 @@ function renderMov(){const{x,isNew}=UI.draft;const tipos=[['saida','Saída da po
   <button class="btn block" data-a="saveMov">Guardar</button>${isNew?'':'<button class="btn danger block" data-a="delMov">Apagar</button>'}`)}
 
 /* ---------- MAIS ---------- */
-V.mais=()=>{const items=[['premios','🏅','Prémios e pontos','Classificações trimestrais e de época por turma'],['testes','⏱','Testes físicos','Registo com cronómetro, progressão e impressão A4'],['aniv','🎂','Aniversários','Exportar para o calendário do telemóvel'],
-  ['config','⚙️','Definições do clube','Turmas, horários, épocas, valores e descontos'],['geral','🧩','Definições gerais','Quotas por ano, pontos, testes, graus e mensagens'],['dados','💾','Dados e backup','Exportar, importar, CSV']];
-  return `<div class="list">${items.map(([t,i,l,s])=>`<div class="li" data-a="tab" data-t="${t}"><span style="font-size:22px">${i}</span><div class="grow"><div class="nm">${l}</div><div class="muted sm">${s}</div></div><span class="muted">›</span></div>`).join('')}</div>
+V.mais=()=>{const k=K();const nk=String(Math.max(...Object.keys(CD().epocas).map(Number))+1);
+  const items=[['tab:premios','🏅','Prémios e pontos','Destaque do mês, prémio trimestral e classificação da época'],['newSeasonM','📅',`Nova época (${seasonLabel(nk)})`,'Cria a época seguinte e leva à reinscrição dos atletas'],
+  ['tab:config','⚙️','Definições do clube','Turmas, horários e lotação, feriados, épocas, valores, aniversários'],['tab:geral','🧩','Definições gerais','Quotas por ano, pontos, testes, graus e mensagens'],['tab:dados','💾','Dados e backup','Exportar, importar, CSV']];
+  return `<div class="list">${items.map(([a,i,l,s])=>{const[act,t]=a.split(':');return `<div class="li" data-a="${t?'tab':act}" ${t?`data-t="${t}"`:''}><span style="font-size:22px">${i}</span><div class="grow"><div class="nm">${l}</div><div class="muted sm">${s}</div></div><span class="muted">›</span></div>`}).join('')}</div>
   <p class="muted sm" style="text-align:center">${esc(DB.user.email)}${DB.mode==='demo'?' (demo)':''} · <a href="#" data-a="logout">Sair</a></p>`};
-
-V.premios=()=>{const cd=CD(),k=K(),cx=ctx(),M=META();if(!UI.pre.t){const mo=+today().slice(5,7);UI.pre.t=mo>=9?'T1':mo<=3?'T2':'T3'}const t=UI.pre.t;
-  const tab=L.pointsTable(cd,cx,M,k,t);
-  let h=back('Prémios e pontos')+`<div class="seg">${[...L.TRIM.map(x=>[x[0],x[0]]),['E','Época']].map(([v,l])=>`<button class="${t===v?'on':''}" data-a="preT" data-t="${v}">${l}</button>`).join('')}</div><button class="btn block" data-a="newAward">+ Atribuir pontos</button>`;
-  for(const tu of cd.turmas){const rows=Object.values(tab).filter(x=>x.turma===tu.id).sort((a,b)=>b.tot-a.tot||nameOf(cx.athletes[a.id]).localeCompare(nameOf(cx.athletes[b.id])));if(!rows.length)continue;
-    h+=`<div class="list" style="margin-top:12px"><div class="gh">${esc(tu.nome)}</div>${rows.map((x,i)=>`<div class="li" data-a="editAth" data-id="${x.id}"><span class="rank">${['🥇','🥈','🥉'][i]&&x.tot>0?['🥇','🥈','🥉'][i]:i+1}</span><div class="grow"><div class="nm">${esc(N(x.id))}</div><div class="muted sm">assid. ${x.pct!=null?Math.round(x.pct*100)+'% → ':''}${x.assid} · prémios ${x.prem} · eventos ${x.ev}</div></div><b>${x.tot}</b></div>`).join('')}</div>`}
+function periodKey(k,t){return t==='E'?`${k}-E`:t.startsWith('M:')?t.slice(2):`${k}-${t}`}
+function periodLabel(t){return t==='E'?'Prémio da época':t.startsWith('M:')?`Destaque de ${L.MESES[+t.slice(7,9)-1].toLowerCase()}`:`Prémio do ${L.TRIM.find(x=>x[0]===t)[1]}`}
+function winners(tab,turmaId){const pc=x=>Math.round((x.pct??-1)*1000);const rows=Object.values(tab).filter(x=>x.turma===turmaId).sort((a,b)=>b.tot-a.tot||pc(b)-pc(a));if(!rows.length||!(rows[0].tot>0))return[];return rows.filter(x=>x.tot===rows[0].tot&&pc(x)===pc(rows[0]))}
+function prizesDue(){const cd=CD(),k=K(),cx=ctx(),M=META(),t=today();const out=[];const ent=cd.entregas||{};
+  const pm=L.addMonths(t.slice(0,7),-1);const per=[];if(L.seasonOf(pm+'-15')===k&&(cd.epocas[k].meses||[]).includes(pm))per.push('M:'+pm);
+  for(const x of L.TRIM){const r=L.trimRange(k,x[0]);if(r.to<t&&r.to>=L.addDays(t,-60))per.push(x[0])}
+  for(const p of per){const tab=L.pointsTable(cd,cx,M,k,p);for(const tu of cd.turmas){if(ent[periodKey(k,p)]?.[tu.id])continue;const w=winners(tab,tu.id);if(w.length)out.push({t:p,label:periodLabel(p),turma:tu.nome,nomes:w.map(x=>N(x.id)).join(', ')})}}
+  return out}
+V.premios=()=>{const cd=CD(),k=K(),cx=ctx(),M=META();const tm=today().slice(0,7);
+  if(!UI.pre.t){UI.pre.t='M:'+tm}const t=UI.pre.t;const isM=t.startsWith('M:');
+  const ms=(cd.epocas[k].meses||[]);const tab=L.pointsTable(cd,cx,M,k,t);const ent=cd.entregas?.[periodKey(k,t)]||{};
+  let h=back('Prémios e pontos')+`<div class="seg">${[['M','Mês'],...L.TRIM.map(x=>[x[0],x[0]]),['E','Época']].map(([v,l])=>`<button class="${(v==='M'?isM:t===v)?'on':''}" data-a="preT" data-t="${v==='M'?'M:'+(isM?t.slice(2):(ms.includes(tm)?tm:ms[ms.length-1])):v}">${l}</button>`).join('')}</div>`;
+  if(isM)h+=`<select data-c="preM">${ms.map(m=>`<option value="${m}" ${'M:'+m===t?'selected':''}>${mLabel(m)}</option>`).join('')}</select>`;
+  h+=`<button class="btn block" data-a="newAward">+ Atribuir pontos</button>`;
+  for(const tu of cd.turmas){const pc=x=>Math.round((x.pct??-1)*1000);const rows=Object.values(tab).filter(x=>x.turma===tu.id).sort((a,b)=>b.tot-a.tot||pc(b)-pc(a)||nameOf(cx.athletes[a.id]).localeCompare(nameOf(cx.athletes[b.id])));if(!rows.length)continue;
+    const rk=[];rows.forEach((x,i)=>{const p=rows[i-1];rk[i]=p&&p.tot===x.tot&&pc(p)===pc(x)?rk[i-1]:i+1});
+    const w=winners(tab,tu.id);const e=ent[tu.id];
+    const prize=w.length?(e?`<div class="srow entregue"><span>✅ ${esc(e.premio||'Prémio')} entregue a ${esc((e.ath||[]).map(N).join(', '))}</span><span class="muted sm">${fmtD(e.data)}</span><button class="x" data-a="prizeUndo" data-t="${t}" data-tu="${tu.id}">×</button></div>`
+      :`<div class="srow"><span>${isM?'Destaque':'Prémio'}: <b>${esc(w.map(x=>N(x.id)).join(', '))}</b></span><button class="btn sm" data-a="prizeGive" data-t="${t}" data-tu="${tu.id}">Marcar entregue</button></div>`):'';
+    h+=`<div class="list" style="margin-top:12px"><div class="gh">${esc(tu.nome)}</div>${prize?`<div style="padding:4px 12px;background:var(--card)">${prize}</div>`:''}${rows.map((x,i)=>`<div class="li" data-a="editAth" data-id="${x.id}"><span class="rank">${rk[i]<=3&&x.tot>0?['🥇','🥈','🥉'][rk[i]-1]:rk[i]}</span><div class="grow"><div class="nm">${esc(N(x.id))}</div><div class="muted sm">assid. ${x.pct!=null?Math.round(x.pct*100)+'% → ':''}${x.assid} · prémios ${x.prem} · eventos ${x.ev}</div></div><b>${x.tot}</b></div>`).join('')}</div>`}
   const r=L.trimRange(k,t);const aw=Object.values(cx.awards).filter(x=>x.data>=r.from&&x.data<=r.to).sort((a,b)=>a.data<b.data?1:-1);
   if(aw.length)h+=`<details><summary>Pontos atribuídos neste período (${aw.length})</summary><div class="list">${aw.map(x=>`<div class="li"><div class="grow"><div class="nm">${esc(N(x.ath))} · ${esc(x.nome)}</div><div class="muted sm">${fmtD(x.data)}${x.nota?' · '+esc(x.nota):''}</div></div><b>+${x.pts}</b><button class="x" data-a="delAward" data-id="${x.id}">×</button></div>`).join('')}</div></details>`;
-  h+=`<p class="muted sm">Assiduidade por trimestre: ${(M.assidTiers||[]).map(x=>`≥${x.min}% = ${x.pts}`).join(' · ')} pts. A época soma os três trimestres.</p>`;return h};
+  h+=`<p class="muted sm">Assiduidade: pontos proporcionais (100% = ${+(M.assidMax??10)} pts por ${isM?'mês':'trimestre'}). Ordenado por pontos e, em empate, pela assiduidade exata. O destaque do mês é sem custo; o prémio físico é trimestral.</p>`;return h};
 function awardDraft(){const M=META();const ty=M.awardTypes?.[0]||{id:'',nome:'',pts:5};UI.draft={kind:'aw',tipo:ty.id,pts:ty.pts,data:today(),turma:CD().turmas[0].id,sel:{},nota:''};UI.sheetLive=null;renderAward()}
 function renderAward(){const d=UI.draft,M=META(),k=K();const as=athsIn(k,d.turma,curMonth(k));
   openSheet(shH('Atribuir pontos')+`<div class="card"><label>Tipo</label><div class="chips">${(M.awardTypes||[]).map(t=>`<button class="chip ${d.tipo===t.id?'on':''}" data-a="awT" data-id="${t.id}">${esc(t.nome)} · ${t.pts}</button>`).join('')}</div>
@@ -315,7 +430,7 @@ function renderAward(){const d=UI.draft,M=META(),k=K();const as=athsIn(k,d.turma
 
 /* ---------- TESTES ---------- */
 V.testes=()=>{const cx=ctx();const ss=Object.values(cx.tests).sort((a,b)=>a.data<b.data?1:-1);const M=META();
-  return back('Testes físicos')+`<button class="btn block" data-a="newTest">+ Sessão de testes</button>`+(ss.length?`<div class="list" style="margin-top:12px">${ss.map(s=>{const n=Object.keys(s.res||{}).length;return `<div class="li" data-a="openTest" data-id="${s.id}"><div class="grow"><div class="nm">${fmtD(s.data)} · ${(s.turmas||[]).map(t=>turma(t).nome).join(' + ')}</div><div class="muted sm">${(s.testes||[]).map(id=>M.tests.find(t=>t.id===id)?.nome||id).join(', ')}</div></div><span class="tag t-mut">${n} atl.</span></div>`}).join('')}</div>`:empty('Sem sessões de testes.'))};
+  return `<button class="btn block" data-a="newTest">+ Sessão de testes</button>`+(ss.length?`<div class="list" style="margin-top:12px">${ss.map(s=>{const n=Object.keys(s.res||{}).length;return `<div class="li" data-a="openTest" data-id="${s.id}"><div class="grow"><div class="nm">${fmtD(s.data)} · ${(s.turmas||[]).map(t=>turma(t).nome).join(' + ')}</div><div class="muted sm">${(s.testes||[]).map(id=>M.tests.find(t=>t.id===id)?.nome||id).join(', ')}</div></div><span class="tag t-mut">${n} atl.</span></div>`}).join('')}</div>`:empty('Sem sessões de testes.'))};
 function newTest(){const M=META();const id='t'+uid();const s={id,data:today(),turmas:CD().turmas.map(t=>t.id),testes:M.tests.map(t=>t.id),res:{}};put('tests',id,s);openTest(id)}
 function openTest(id){UI.tst={id,test:null};UI.sheetLive=renderTest;renderTest()}
 function renderTest(){const s=ctx().tests[UI.tst.id];if(!s){closeSheet();return}const M=META(),k=L.seasonOf(s.data);const tests=(s.testes||[]).map(id=>M.tests.find(t=>t.id===id)).filter(Boolean);
@@ -370,6 +485,8 @@ function printMonth(m,frase){const cd=CD(),k=L.seasonOf(m+'-15');const rows=mont
     tb+=`<tr>${first?`<td rowspan="${rows.length}" class="mc">${mes}</td>`:''}${i===0?`<td rowspan="${w.rows.length}" class="mc">${w.sem}</td>`:''}<td class="${cls}">${esc(r.nome)}</td><td class="${cls}">${fmtD(r.data).slice(0,5)}</td><td class="${cls}">${esc(r.local)}</td></tr>`;first=false});
   let h=`<div class="mp"><h1>${esc(planTitle())} ${k} – ${+k+1}</h1><h3>Calendário ${mes}</h3>
    <table class="cal"><thead><tr><th>Mês</th><th>Semana</th><th>Evento</th><th>Data</th><th>Local</th></tr></thead><tbody>${tb||'<tr><td colspan="5">Sem atividades</td></tr>'}</tbody></table>`;
+  {const bds=athsIn(k,'',m).filter(a=>a.nasc&&a.nasc.slice(5,7)===m.slice(5,7)).sort((a,b)=>a.nasc.slice(8)<b.nasc.slice(8)?-1:1);
+   if(bds.length)h+=`<table class="box"><tr><th colspan="3" class="bd">Aniversários de ${mes}</th></tr><tr><td><b>Atleta</b></td><td><b>Dia</b></td><td><b>Faz</b></td></tr>${bds.map(a=>`<tr><td>${esc(nameOf(a))}</td><td>${a.nasc.slice(8)}/${m.slice(5,7)}</td><td>${L.ageAt(a.nasc,m+'-'+a.nasc.slice(8))} anos</td></tr>`).join('')}</table>`}
   const reps=Object.values(CL().sessions).filter(s=>s.tipo==='reposicao'&&s.estado!=='cancelada'&&s.data>=m+'-01'&&s.data<=last);
   if(reps.length){const slots={};reps.forEach(s=>{const key=`${s.ini}|${s.fim}`;(slots[key]=slots[key]||new Set()).add(turma(s.turma).nome)});const keys=Object.keys(slots).sort();
     const single=keys.length===1;h+=`<table class="box"><tr><th colspan="2" class="rp">Horário Aula de Reposição</th></tr>${keys.map(key=>{const[a,b]=key.split('|');const lab=[...slots[key]].join(' e ');return single&&slots[key].size>1?`<tr><td colspan="2">${hh(a)} – ${hh(b)}</td></tr>`:`<tr><td>Aula ${esc(lab)}:</td><td>${hh(a)} – ${hh(b)}</td></tr>`}).join('')}</table>`}
@@ -392,9 +509,13 @@ V.config=()=>{if(UI.draft?.kind!=='club'||UI.draft.cid!==UI.club)UI.draft={kind:
    <div class="grid2"><div><label>Título no plano mensal</label><input value="${esc(cfg.titulo||'')}" placeholder="${esc(/WADO/i.test(c.nome)?c.nome.toUpperCase():c.nome.toUpperCase()+' WADO KARATÉ')}" data-c="cfgCfg" data-k="titulo"></div><div><label>Local das aulas</label><input value="${esc(cfg.local||'')}" placeholder="${esc(c.nome)}" data-c="cfgCfg" data-k="local"></div></div>
    <label>Modelo de contas</label><div class="seg">${[['gestao','Gestão completa'],['professor','Só professor']].map(([v,l])=>`<button class="${c.modelo===v?'on':''}" data-a="cfgModelo" data-v="${v}">${l}</button>`).join('')}</div>
    <label>Turmas</label>${c.turmas.map((t,i)=>`<div class="hrow"><label class="mini">Nome<input value="${esc(t.nome)}" data-c="cfgTurma" data-i="${i}" data-f="nome"></label><label class="mini" style="flex:0 0 80px">Prefixo<input value="${esc(t.pre)}" data-c="cfgTurma" data-i="${i}" data-f="pre"></label></div>`).join('')}</div>`;
-  h+=`<div class="card"><h3>Horários</h3><p class="muted sm">Quando o horário muda, cria um novo com a data a partir da qual vale. As aulas anteriores mantêm-se.</p>${c.horarios.map((ho,hi)=>`<div class="blk"><div class="row gap"><label class="mini grow">A partir de<input type="date" value="${ho.desde}" data-c="hoDesde" data-hi="${hi}"></label>${c.horarios.length>1?`<button class="x" data-a="hoRm" data-hi="${hi}">×</button>`:''}</div>
-    ${ho.slots.map((s,si)=>`<div class="slot"><select data-c="hoS" data-hi="${hi}" data-si="${si}" data-f="t">${c.turmas.map(t=>`<option value="${t.id}" ${s.t===t.id?'selected':''}>${esc(t.nome)}</option>`).join('')}</select><select data-c="hoS" data-hi="${hi}" data-si="${si}" data-f="wd">${[1,2,3,4,5,6,0].map(w=>`<option value="${w}" ${+s.wd===w?'selected':''}>${DOW[w]}</option>`).join('')}</select><input type="time" value="${s.ini}" data-c="hoS" data-hi="${hi}" data-si="${si}" data-f="ini"><input type="time" value="${s.fim}" data-c="hoS" data-hi="${hi}" data-si="${si}" data-f="fim"><button class="x" data-a="hoSRm" data-hi="${hi}" data-si="${si}">×</button></div>`).join('')}
+  h+=`<div class="card"><h3>Horários</h3><p class="muted sm">Quando o horário muda, cria um novo com a data a partir da qual vale. As aulas anteriores mantêm-se. Em cada aula: turma, dia, início, fim e lotação máxima.</p>${c.horarios.map((ho,hi)=>`<div class="blk"><div class="row gap"><label class="mini grow">A partir de<input type="date" value="${ho.desde}" data-c="hoDesde" data-hi="${hi}"></label>${c.horarios.length>1?`<button class="x" data-a="hoRm" data-hi="${hi}">×</button>`:''}</div>
+    ${ho.slots.map((s,si)=>`<div class="slot"><select data-c="hoS" data-hi="${hi}" data-si="${si}" data-f="t">${c.turmas.map(t=>`<option value="${t.id}" ${s.t===t.id?'selected':''}>${esc(t.nome)}</option>`).join('')}</select><select data-c="hoS" data-hi="${hi}" data-si="${si}" data-f="wd">${[1,2,3,4,5,6,0].map(w=>`<option value="${w}" ${+s.wd===w?'selected':''}>${DOW[w]}</option>`).join('')}</select><input type="time" value="${s.ini}" data-c="hoS" data-hi="${hi}" data-si="${si}" data-f="ini"><input type="time" value="${s.fim}" data-c="hoS" data-hi="${hi}" data-si="${si}" data-f="fim"><input type="number" min="0" placeholder="lot." title="Lotação" value="${s.lot??''}" data-c="hoS" data-hi="${hi}" data-si="${si}" data-f="lot"><button class="x" data-a="hoSRm" data-hi="${hi}" data-si="${si}">×</button></div>`).join('')}
     <button class="btn sm ghost" data-a="hoSAdd" data-hi="${hi}">+ aula</button></div>`).join('')}<button class="btn sm" data-a="hoAdd">+ Novo horário</button></div>`;
+  {const as=athsIn(k,'',curMonth(k)).filter(a=>a.nasc);const exp=new Set(CD().icsExp||[]);const nw=as.filter(a=>!exp.has(a.id)).length;
+   h+=`<div class="card"><h3>Aniversários no calendário</h3><p class="muted sm">Exporta para um calendário separado no Google Calendar (ex.: “Aniversários Karaté”), com um evento anual por atleta.</p>
+   <button class="btn block" data-a="ics" data-v="new" ${nw?'':'disabled'}>Exportar só os novos (${nw})</button><button class="btn ghost block" data-a="ics" data-v="all">Exportar todos (${as.length})</button>
+   <details><summary>Como importar no Google Calendar</summary><ol class="sm"><li>No computador, abre calendar.google.com → ⚙️ Definições.</li><li>“Adicionar calendário” → “Criar novo calendário” → “Aniversários Karaté”.</li><li>“Importar e exportar” → escolhe o ficheiro .ics e o calendário “Aniversários Karaté”.</li><li>Nas definições desse calendário, em “Notificações de eventos de dia inteiro”, põe “1 dia antes às 9:00” e “no dia às 9:00”.</li></ol></details></div>`}
   h+=`<div class="card"><h3>Feriados e pausas</h3><p class="muted sm">Os feriados nacionais (incluindo Sexta-feira Santa e Corpo de Deus) são automáticos: essas aulas aparecem como feriado, não ficam por repor e saem do plano mensal. Se mesmo assim deres aula, basta registá-la.</p>
    <label>Feriado municipal (MM-DD, ex.: 06-24 para São João)</label><input value="${esc(cfg.municipal||'')}" placeholder="06-24" data-c="cfgCfg" data-k="municipal">
    <label>Pausas (Natal, Páscoa, Carnaval…)</label>${rows('pausas',cfg.pausas,[['desde','De','date'],['ate','Até','date'],['motivo','Motivo']],'pausa')}</div>`;
@@ -419,7 +540,7 @@ V.geral=()=>{if(UI.draft?.kind!=='meta')UI.draft={kind:'meta',m:copy(META())};co
   let h=back('Definições gerais')+`<div class="card"><h3>Quotas por ano civil</h3><p class="muted sm">Infantil = até aos 9 anos. Reduzido = quem entra entre setembro e dezembro (só federação e associação).</p>
    ${Y.map(y=>`<div class="blk"><b>${y}</b>${L.QITEMS.map(([it,l])=>`<div class="hrow"><span style="flex:0 0 78px" class="sm">${l}</span>${(it==='seg'?[['inf','Infantil'],['norm','Normal']]:[['inf','Infantil'],['norm','Normal'],['redInf','Red. inf.'],['redNorm','Red. norm.']]).map(([f,fl])=>`<label class="mini">${fl}<input type="number" step="0.01" value="${m.quotas[y][it]?.[f]??0}" data-c="mQ" data-y="${y}" data-it="${it}" data-f="${f}"></label>`).join('')}</div>`).join('')}</div>`).join('')}
    <button class="btn sm ghost" data-a="mQAdd">+ Ano ${Y.length?+Y[Y.length-1]+1:today().slice(0,4)}</button></div>
-   <div class="card"><h3>Tipos de prémio</h3>${lst('awardTypes',[['nome','Nome'],['pts','Pontos','number','70px']],'tipo')}<h3 style="margin-top:12px">Pontos de assiduidade (por trimestre)</h3>${lst('assidTiers',[['min','A partir de %','number'],['pts','Pontos','number']],'patamar')}</div>
+   <div class="card"><h3>Tipos de prémio</h3>${lst('awardTypes',[['nome','Nome'],['pts','Pontos','number','70px']],'tipo')}<h3 style="margin-top:12px">Pontos de assiduidade</h3><label>Pontos para 100% de assiduidade, por mês ou trimestre (proporcional)</label><input type="number" step="1" value="${m.assidMax??10}" data-c="mTop" data-k="assidMax"></div>
    <div class="card"><h3>Bateria de testes</h3>${lst('tests',[['nome','Nome'],['un','Unid.','','55px'],['melhor','Melhor','sel','80px'],['tent','Tent.','number','50px'],['dec','Dec.','number','50px']],'teste')}</div>
    <div class="card"><h3>Graduações</h3><textarea data-c="mGraus">${esc((m.graus||[]).join('\n'))}</textarea></div>
    <div class="card"><h3>Mensagens</h3><p class="muted sm">Variáveis: {nome} {clube} {detalhe} {mens}</p>${[['pag','Confirmação de mensalidade'],['lemb','Lembrete de mensalidade'],['quota','Confirmação de quotas e taxas'],['parab','Parabéns']].map(([k,l])=>`<label>${l}</label><textarea data-c="mMsg" data-k="${k}">${esc(m.msgs?.[k]||'')}</textarea>`).join('')}</div>
@@ -437,6 +558,12 @@ function closeSheet(){$('#sheet').classList.add('hidden');document.body.classLis
 const shH=t=>`<div class="sh-h"><h2 style="margin:0">${t}</h2><button class="x" data-a="close" aria-label="Fechar">×</button></div>`;
 
 /* ---------- AÇÕES ---------- */
+function sibsOf(id,k){const a=ctx().athletes[id];if(!a?.irmaos)return[a];const g=a.irmaos.trim().toLowerCase();
+  return Object.values(ctx().athletes).filter(o=>o.id===id||((o.irmaos||'').trim().toLowerCase()===g&&L.enr(o,k))).sort((x,y)=>x.id===id?-1:y.id===id?1:nameOf(x).localeCompare(nameOf(y)))}
+const first=a=>nameOf(a).split(' ')[0];
+function buildMsg(tpl,groups,lead){const many=groups.length>1;const nItems=groups.reduce((s,g)=>s+g.items.length,0);
+  const detalhe=many?L.sibPayDetail(groups.map(g=>({nome:first(g.a),items:g.items}))):L.payDetail(groups[0].items);const nome=many?L.joinPt(groups.map(g=>first(g.a))):nameOf(lead);
+  let t=L.fill(tpl,{nome,clube:CD().nome,detalhe,mens:nItems>1?'das mensalidades':'da mensalidade'});if(many)t=t.replace('do(a) '+nome,'dos irmãos '+nome);return t}
 function payItems(id,m){const cd=CD(),k=K(),cx=ctx();const p=cx.payments[m]?.[id];const ms=(cd.epocas[k].meses||[]).filter(mm=>{const q=cx.payments[mm]?.[id];return q?.s==='P'&&(mm===m||(p?.d&&q.d===p.d))});
   return ms.map(mm=>({m:mm,f:L.freqAt(L.enr(cx.athletes[id],k),mm),v:+cx.payments[mm][id].v}))}
 function msgVars(id,items,detailFn){return{nome:N(id),clube:CD().nome,detalhe:detailFn(items),mens:items.length>1?'das mensalidades':'da mensalidade'}}
@@ -446,7 +573,7 @@ const A={
   login:async()=>{try{await api().login()}catch(e){alert('Não foi possível entrar: '+(e.code||e.message))}},
   logout:(d,el,e)=>{e.preventDefault();if(confirm('Sair da conta?'))api().logout()},
   clrErr:()=>{DB.error='';render()},
-  tab:d=>{UI.tab=d.t;UI.draft=null;closeSheet();window.scrollTo(0,0)},
+  tab:d=>{UI.tab=d.t;UI.draft=null;if(d.t==='aulas')UI.aul.scroll=true;closeSheet();window.scrollTo(0,0)},
   close:()=>closeSheet(),
   sheetBg:(d,el,e)=>{if(e.target.id==='sheet')closeSheet()},
   seedAll:async(d,el)=>{el.disabled=true;el.textContent='A criar…';const S=seedClubs();const ops=[{meta:true,data:seedMeta()}];
@@ -457,8 +584,44 @@ const A={
     api().put(id,null,null,{id,nome:n.trim(),modelo:'gestao',turmas:[{id:'C',nome:'Crianças',pre:pre+'C'},{id:'A',nome:'Adultos',pre:pre+'A'}],horarios:[{desde:`${k}-09-01`,slots:[]}],
       epocas:{[k]:{inicio:`${k}-09-01`,fim:`${+k+1}-07-31`,meses:L.seasonMonthsAll(k).slice(0,11),poupInicial:0}},cfg:{valores:[{desde:`${k}-09`,1:20,2:28}],pctEspaco:[{desde:`${k}-09`,v:0}],poupMensal:[{desde:`${k}-09`,v:0}],poupShare:50,entNome:'Espaço',poupNome:'Poupança',descontos:[],descMax:10,pesoJ:0.2,valorAluno:0,valorAula:0,modeloPag:'aluno'},icsExp:[]});
     UI.club=id;pref('club',id);UI.tab='config';UI.draft=null;toast('Clube criado — define horários e contas')},
-  goContas:d=>{UI.tab='contas';UI.con.v=d.v;render()},
-  goInscrever:()=>{UI.tab='atletas';UI.ath.f='out';render()},
+  goContas:d=>{UI.tab='contas';UI.con.v=d.v;closeSheet()},
+  goInscrever:()=>{UI.tab='atletas';UI.ath.f='out';closeSheet()},
+  goDeve:()=>{UI.tab='atletas';UI.ath.f='deve';UI.ath.q='';closeSheet();window.scrollTo(0,0)},
+  goPremios:d=>{UI.tab='premios';UI.pre.t=d.t;closeSheet()},
+  pickClub:d=>{UI.club=d.id;pref('club',d.id);UI.tab='aulas';UI.aul={m:null,t:'',scroll:true};UI.con.m=null;UI.draft=null;_ctx=null;render();window.scrollTo(0,0)},
+  toPicker:()=>{UI.club=null;UI.draft=null;closeSheet();window.scrollTo(0,0)},
+  showAlerts:()=>{UI.sheetLive=renderAlerts;renderAlerts()},
+  alterSess:(d,el,e)=>{e.stopPropagation();alterDraft(d.id)},
+  openAlterOf:d=>alterDraft(d.id),
+  alterRepoT:()=>{UI.draft.repo=!UI.draft.repo;renderAlter()},
+  alterSave:()=>{const d=UI.draft;const s=getSessById(d.id);if(!s)return;
+    if(s.estado!=='cancelada'){s.estado='cancelada';s.motivo=(d.motivo||'').trim();s.pres={};delete s.trocas;putSess(s)}
+    if(d.repo){if(!d.rdata){toast('Falta a data da reposição');return}createRepo(s,d.rdata,d.rini,d.rfim);toast(`Cancelada · reposição a ${fmtD(d.rdata).slice(0,5)}`)}else toast('Aula cancelada');UI.draft=null;closeSheet()},
+  alterUndo:()=>{const s=getSessById(UI.draft.id);if(!s)return;const r=L.reposedBy(CL().sessions,s.id);if(r&&!confirm('Esta aula já tem uma reposição marcada. Anular o cancelamento e apagar a reposição?'))return;
+    if(r&&!Object.keys(r.pres||{}).length)del('sessions',r.id);else if(r)put('sessions',r.id,{...copy(r),repoe:[],tipo:'extra'});
+    s.estado='prevista';s.motivo='';if(s.virtual===false&&!s.plano&&!s.nota)del('sessions',s.id);else putSess(s);UI.draft=null;closeSheet();toast('Cancelamento anulado')},
+  alterMove:()=>{const d=UI.draft;const s=getSessById(d.id);if(!d.ndata){toast('Falta a data');return}putSess({...s,data:d.ndata,ini:d.nini,fim:d.nfim});UI.draft=null;closeSheet();toast('Aula alterada')},
+  sessDelAlt:()=>{if(!confirm('Apagar esta aula?'))return;del('sessions',UI.draft.id);UI.draft=null;closeSheet()},
+  sessTr:d=>{UI.sess.tr=UI.sess.tr===d.id?null:d.id;UI.sess.aw=null;renderSess()},
+  trocaSet:d=>{const s=getSess();const tg=getSessById(d.to);if(!tg)return;s.trocas={...(s.trocas||{}),[d.id]:tg.id};if(s.pres)delete s.pres[d.id];saveSess(s);
+    tg.vem={...(tg.vem||{}),[d.id]:s.id};putSess(tg);UI.sess.tr=null;toast(`${N(d.id)} vem ${DOW[L.wdOf(tg.data)]} ${fmtD(tg.data).slice(0,5)}`)},
+  trocaDel:d=>{const s=getSess();const to=s.trocas?.[d.id];if(!confirm('Anular a troca de dia de '+N(d.id)+'?'))return;delete s.trocas[d.id];saveSess(s);const tg=to&&getSessById(to);if(tg&&tg.vem){delete tg.vem[d.id];if(tg.pres)delete tg.pres[d.id];putSess(tg)}},
+  athTab:d=>{UI.draft.tab=d.v;renderAth();$('#sheetBody').scrollTop=0},
+  openPay:(d,el,e)=>{e.stopPropagation();athDraft(d.id,'pag')},
+  payAll:d=>{const cd=CD(),k=K(),cx=ctx();const a=cx.athletes[d.id];const due=L.dueList(cd,cx,k,today().slice(0,7)).filter(x=>x.id===d.id);if(!due.length)return;
+    if(!confirm(`Marcar ${due.length} mês(es) como pagos (${eur(due.reduce((s,x)=>s+x.v,0))})?`))return;for(const x of due){const pm=copy(cx.payments[x.m]||{});pm[d.id]={s:'P',v:x.v,d:today()};put('payments',x.m,pm)}
+    if(a.lemb)put('athletes',a.id,{...copy(a),lemb:''});toast('Pagamentos registados')},
+  remindA:d=>{UI.con.m=today().slice(0,7);A.remind(d);if(UI.draft?.kind==='ath'&&UI.draft.a.id===d.id)UI.draft.a.lemb=today()},
+  evCycleA:d=>{const ev=copy(ctx().events[d.ev]);const x=ev.atl[d.id];x.estado=x.estado==='falta'?'cobrado':x.estado==='cobrado'?'entregue':'falta';if(x.estado==='cobrado'){x.v=+ev.valor||0;x.d=today()}put('events',ev.id,ev)},
+  feeMsgA:d=>{const fs=Object.values(ctx().fees).filter(f=>f.ath===d.id&&f.estado==='cobrado');if(!fs.length)return;const y=fs.map(f=>f.ano).sort().pop();A.feeMsg({id:d.id,y})},
+  simOpen:()=>simDraft(),simReset:()=>{const b=UI.draft.base;UI.draft={...copy(b),base:b};renderSim()},
+  prizeGive:d=>{const cd=CD(),k=K();const tab=L.pointsTable(cd,ctx(),META(),k,d.t);const w=winners(tab,d.tu);if(!w.length)return;const isM=d.t.startsWith('M:');
+    const pr=prompt(`Prémio entregue a ${w.map(x=>N(x.id)).join(', ')}:`,isM?'Destaque do mês':'Patch');if(pr==null)return;const c=copy(cd);c.entregas=c.entregas||{};const key=periodKey(k,d.t);c.entregas[key]={...(c.entregas[key]||{}),[d.tu]:{ath:w.map(x=>x.id),premio:pr.trim()||'Prémio',data:today()}};saveClub(c);toast('Entrega registada')},
+  prizeUndo:d=>{if(!confirm('Anular o registo desta entrega?'))return;const c=copy(CD());const key=periodKey(K(),d.t);if(c.entregas?.[key]){delete c.entregas[key][d.tu];saveClub(c)}},
+  newSeasonM:()=>{const c=copy(CD());const k=String(Math.max(...Object.keys(c.epocas).map(Number))+1);if(!confirm(`Criar a época ${seasonLabel(k)} em ${c.nome}? Fica com os mesmos meses de cobrança e horário, e com o saldo da poupança transitado.`))return;
+    const prevK=String(+k-1);let poup=0;if(c.modelo==='gestao'&&c.epocas[prevK])poup=L.poupanca(c,ctx(),prevK).saldo;const pe=c.epocas[prevK];
+    c.epocas[k]={inicio:`${k}-09-01`,fim:`${+k+1}-07-31`,meses:(pe?.meses||L.seasonMonthsAll(k).slice(0,11)).map(m=>pe?L.addMonths(m,12):m),poupInicial:poup};saveClub(c);UI.season[UI.club]=k;pref('season',UI.season);
+    UI.tab='atletas';UI.ath.f='out';toast(`Época ${seasonLabel(k)} criada — inscreve quem continua`);render()},
   openSess:d=>openSess(d.id),
   sessEst:d=>{const s=getSess();if(s.estado===d.v)s.estado='prevista';else{s.estado=d.v;if(d.v==='cancelada')s.pres={};if(d.v==='dada'&&!s.plano)s.plano=L.suggestCode(CD(),CL().sessions,s)}
     if(s.estado==='prevista'&&!Object.keys(s.pres||{}).length&&!s.plano&&!s.nota&&s.tipo==='normal'){del('sessions',s.id);UI.sess.v={...s,virtual:true};renderSess();return}saveSess(s)},
@@ -467,7 +630,7 @@ const A={
   sessAwDel:d=>{del('awards',d.id)},
   sessSug:()=>{const s=getSess();s.plano=L.suggestCode(CD(),CL().sessions,s);if(s.estado!=='dada')s.estado='dada';saveSess(s)},
   mark:d=>{const s=getSess();s.pres=s.pres||{};if(s.pres[d.id]===d.s)delete s.pres[d.id];else s.pres[d.id]=d.s;if(Object.keys(s.pres).length&&s.estado!=='dada'){s.estado='dada'}if(s.estado==='dada'&&!s.plano)s.plano=L.suggestCode(CD(),CL().sessions,s);saveSess(s)},
-  allP:()=>{const s=getSess(),k=L.seasonOf(s.data),wd=L.wdOf(s.data);s.pres=s.pres||{};athsIn(k,s.turma,s.data.slice(0,7)).filter(a=>(L.enr(a,k).dias||[]).includes(wd)).forEach(a=>{if(!s.pres[a.id])s.pres[a.id]='P'});s.estado='dada';if(!s.plano)s.plano=L.suggestCode(CD(),CL().sessions,s);saveSess(s)},
+  allP:()=>{const s=getSess();s.pres=s.pres||{};expectedList(s).forEach(a=>{if(!s.pres[a.id])s.pres[a.id]='P'});s.estado='dada';if(!s.plano)s.plano=L.suggestCode(CD(),CL().sessions,s);saveSess(s)},
   sessDel:()=>{if(!confirm('Apagar o registo desta aula (presenças, plano, estado)?'))return;const s=getSess();del('sessions',s.id);closeSheet()},
   newRepo:d=>repoDraft(d.from,false),newExtra:()=>repoDraft(null,true),
   repoT:d=>{UI.draft.turmas[d.t]=!UI.draft.turmas[d.t];renderRepo()},
@@ -506,10 +669,14 @@ const A={
     toast(`${n} atletas importados${skip?` · ${skip} já existiam`:''}`);UI.draft=null;closeSheet()},
   conV:d=>{UI.con.v=d.v;render()},
   payCycle:d=>{const cd=CD(),k=K(),cx=ctx();const a=cx.athletes[d.id];const s=L.monthStatus(cd,a,cx,k,d.m);const pm=copy(cx.payments[d.m]||{});
-    if(!s||['falta','semPres','isentoFixo'].includes(s.st))pm[d.id]={s:'P',v:L.monthValue(cd,a,cx,k,d.m).v,d:today()};else if(s.st==='pago')pm[d.id]={s:'I'};else delete pm[d.id];put('payments',d.m,pm)},
+    if(!s||['falta','semPres','isentoFixo'].includes(s.st)){pm[d.id]={s:'P',v:L.monthValue(cd,a,cx,k,d.m).v,d:today()};if(a.lemb&&!L.dueList(cd,{...cx,payments:{...cx.payments,[d.m]:pm}},k,d.m).some(x=>x.id===a.id))put('athletes',a.id,{...copy(a),lemb:''})}else if(s.st==='pago')pm[d.id]={s:'I'};else delete pm[d.id];put('payments',d.m,pm)},
   payVal:d=>{const pm=copy(ctx().payments[d.m]||{});const p=pm[d.id];if(!p||p.s!=='P')return;const v=prompt('Valor pago (€)',p.v);if(v==null)return;const n=parseFloat(String(v).replace(',','.'));if(isNaN(n))return;p.v=n;put('payments',d.m,pm)},
-  payMsg:d=>{const items=payItems(d.id,d.m);sendMsg(ctx().athletes[d.id],L.fill(META().msgs?.pag,msgVars(d.id,items,L.payDetail)))},
-  remind:d=>{const items=L.dueList(CD(),ctx(),K(),UI.con.m).filter(x=>x.id===d.id).map(x=>({m:x.m,f:x.f,v:x.v}));sendMsg(ctx().athletes[d.id],L.fill(META().msgs?.lemb,msgVars(d.id,items,L.payDetail)))},
+  payMsg:d=>{const k=K(),cx=ctx();const p=cx.payments[d.m]?.[d.id];if(!p)return;
+    const sibs=sibsOf(d.id,k).filter(s=>{const q=cx.payments[d.m]?.[s.id];return s.id===d.id||(q?.s==='P'&&(!p.d||q.d===p.d))});
+    const groups=sibs.map(a=>({a,items:payItems(a.id,d.m)}));sendMsg(cx.athletes[d.id],buildMsg(META().msgs?.pag,groups,cx.athletes[d.id]));
+    const byM={};groups.forEach(g=>g.items.forEach(x=>{(byM[x.m]=byM[x.m]||copy(cx.payments[x.m]||{}));if(byM[x.m][g.a.id])byM[x.m][g.a.id].msg=today()}));for(const m in byM)put('payments',m,byM[m])},
+  remind:d=>{const k=K(),cx=ctx();const due=L.dueList(CD(),cx,k,UI.con.m);const groups=sibsOf(d.id,k).map(a=>({a,items:due.filter(x=>x.id===a.id).map(x=>({m:x.m,f:x.f,v:x.v}))})).filter(g=>g.items.length);
+    if(!groups.length)return;sendMsg(cx.athletes[d.id],buildMsg(META().msgs?.lemb,groups,cx.athletes[d.id]));groups.forEach(g=>put('athletes',g.a.id,{...copy(g.a),lemb:today()}))},
   newMov:()=>movDraft(null),editMov:d=>movDraft(d.id),movT:d=>{UI.draft.x.tipo=d.v;renderMov()},
   saveMov:()=>{const x=UI.draft.x;if(!x.v||isNaN(+x.v)){toast('Falta o valor');return}x.v=+x.v;if(!x.id)x.id='m'+uid();put('ledger',x.id,x);UI.draft=null;closeSheet()},
   delMov:()=>{if(!confirm('Apagar este movimento?'))return;del('ledger',UI.draft.x.id);UI.draft=null;closeSheet()},
@@ -520,7 +687,7 @@ const A={
   genQuotas:d=>quotaGen(d.y),
   feeCycle:d=>{const f=copy(ctx().fees[d.id]);const a=ctx().athletes[f.ath];if(f.estado==='falta'){f.estado='cobrado';f.v=L.quotaValue(META(),f.ano,f.item,f.red,a?.nasc,today());f.dCob=today()}else if(f.estado==='cobrado'){f.estado='entregue';f.dEnt=today()}else{f.estado='falta';delete f.v;delete f.dCob;delete f.dEnt}put('fees',f.id,f)},
   feeMsg:d=>{const fs=Object.values(ctx().fees).filter(f=>f.ath===d.id&&f.ano===d.y&&f.estado==='cobrado');const last=fs.map(f=>f.dCob).sort().pop();const items=fs.filter(f=>f.dCob===last).map(f=>({label:`${f.item==='seg'?'seguro':'quota da '+L.QITEMS.find(q=>q[0]===f.item)[1]} ${f.ano}`,v:f.v}));
-    sendMsg(ctx().athletes[d.id],L.fill(META().msgs?.quota,{nome:N(d.id),clube:CD().nome,detalhe:L.feeDetail(items)}))},
+    sendMsg(ctx().athletes[d.id],L.fill(META().msgs?.quota,{nome:N(d.id),clube:CD().nome,detalhe:L.feeDetail(items)}));fs.filter(f=>f.dCob===last).forEach(f=>put('fees',f.id,{...copy(f),msg:today()}))},
   deliverAll:d=>{const fs=Object.values(ctx().fees).filter(f=>f.ano===d.y&&f.estado==='cobrado');if(!fs.length){toast('Nada cobrado por entregar');return}if(!confirm(`Marcar ${fs.length} quotas cobradas como entregues?`))return;fs.forEach(f=>put('fees',f.id,{...f,estado:'entregue',dEnt:today()}))},
   newEv:()=>evDraft(null),editEv:d=>evDraft(d.id),
   newEvA:()=>{evDraft(null);const m=UI.aul.m;if(m&&today().slice(0,7)!==m){UI.draft.ev.data=m+'-01';renderEv()}},
@@ -575,7 +742,7 @@ const A={
   csvAtt:()=>{const cx=ctx();const rows=['data;turma;tipo;plano;fnkp;nome;estado'];Object.values(cx.sessions).sort((a,b)=>a.data<b.data?-1:1).forEach(s=>{for(const id in (s.pres||{})){const a=cx.athletes[id];rows.push([s.data,turma(s.turma).nome,s.tipo,s.plano||'',a?.fnkp||'',a?.nome||id,s.pres[id]].join(';'))}});dl(`${CD().id}-presencas.csv`,'﻿'+rows.join('\n'),'text/csv')},
   csvPay:()=>{const cx=ctx();const rows=['mes;fnkp;nome;estado;valor;data'];Object.keys(cx.payments).sort().forEach(m=>{for(const id in cx.payments[m]){const a=cx.athletes[id],p=cx.payments[m][id];rows.push([m,a?.fnkp||'',a?.nome||id,p.s==='P'?'PAGO':'ISENTO',p.v!=null?String(p.v).replace('.',','):'',p.d||''].join(';'))}});dl(`${CD().id}-mensalidades.csv`,'﻿'+rows.join('\n'),'text/csv')}
 };
-const I={pl:t=>{UI.draft[t.dataset.k]=t.value},athQ:t=>{UI.ath.q=t.value;$('#athList').innerHTML=athList()},af:t=>{UI.draft.a[t.dataset.k]=t.value},dr:t=>{UI.draft[t.dataset.k]=t.value},
+const I={sim:t=>{UI.draft[t.dataset.k]=t.value===''?0:+t.value;const r=$('#simRes');if(r)r.innerHTML=simRes()},pl:t=>{UI.draft[t.dataset.k]=t.value},athQ:t=>{UI.ath.q=t.value;$('#athList').innerHTML=athList()},af:t=>{UI.draft.a[t.dataset.k]=t.value},dr:t=>{UI.draft[t.dataset.k]=t.value},
   impT:t=>{UI.draft.text=t.value;$('#impPrev').textContent=L.parseAthleteList(t.value).length+' atleta(s) reconhecido(s)'},
   evf:t=>{UI.draft.ev[t.dataset.k]=t.value},mv:t=>{UI.draft.x[t.dataset.k]=t.value},awf:t=>{UI.draft[t.dataset.k]=t.value}};
 const C={
@@ -592,10 +759,12 @@ const C={
   cfgTop:t=>{UI.draft.c[t.dataset.k]=t.value},cfgTurma:t=>{UI.draft.c.turmas[+t.dataset.i][t.dataset.f]=t.value},
   cfgCfg:t=>{const v=t.value;UI.draft.c.cfg[t.dataset.k]=['entNome','poupNome','titulo','local','municipal'].includes(t.dataset.k)?v:(v===''?'':+v)},
   cfgRow:t=>{const v=t.value;const f=t.dataset.f;UI.draft.c.cfg[t.dataset.key][+t.dataset.i][f]=['1','2','v','v1','v2','meses'].includes(f)?(v===''?'':+v):v},
-  hoDesde:t=>{UI.draft.c.horarios[+t.dataset.hi].desde=t.value},hoS:t=>{const s=UI.draft.c.horarios[+t.dataset.hi].slots[+t.dataset.si];s[t.dataset.f]=t.dataset.f==='wd'?+t.value:t.value},
+  hoDesde:t=>{UI.draft.c.horarios[+t.dataset.hi].desde=t.value},hoS:t=>{const s=UI.draft.c.horarios[+t.dataset.hi].slots[+t.dataset.si];s[t.dataset.f]=t.dataset.f==='wd'?+t.value:t.dataset.f==='lot'?(t.value===''?'':+t.value):t.value},
   epF:t=>{const ep=UI.draft.c.epocas[K()];ep[t.dataset.k]=t.dataset.k==='poupInicial'?+t.value||0:t.value},
   mRow:t=>{const v=t.value,f=t.dataset.f;UI.draft.m[t.dataset.key][+t.dataset.i][f]=['nome','un','melhor','prot'].includes(f)?v:(v===''?'':+v)},
   mQ:t=>{const q=UI.draft.m.quotas[t.dataset.y];(q[t.dataset.it]=q[t.dataset.it]||{})[t.dataset.f]=+t.value||0},
+  mTop:t=>{UI.draft.m[t.dataset.k]=t.value===''?10:+t.value},
+  preM:t=>{UI.pre.t='M:'+t.value;render()},
   mGraus:t=>{UI.draft.m.graus=t.value.split('\n').map(s=>s.trim()).filter(Boolean)},mMsg:t=>{(UI.draft.m.msgs=UI.draft.m.msgs||{})[t.dataset.k]=t.value},
   importFile:t=>{const f=t.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{importBackup(JSON.parse(r.result))}catch(e){alert('Ficheiro inválido: '+e.message)}t.value=''};r.readAsText(f)}
 };

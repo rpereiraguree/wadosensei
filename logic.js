@@ -124,15 +124,16 @@ export function moneySummary(meta,ctx,date){let falta=0,mao=0;
 
 /* ---------- Pontos e classificações ---------- */
 export const TRIM=[['T1','1.º trimestre','09-01','12-31',0],['T2','2.º trimestre','01-01','03-31',1],['T3','3.º trimestre','04-01','08-31',1]];
-export function trimRange(k,t){if(t==='E')return seasonRange(k);const x=TRIM.find(z=>z[0]===t);const y=+k+x[4];return{from:`${y}-${x[2]}`,to:`${y}-${x[3]}`}}
-export function assidPts(meta,pct){if(pct==null)return 0;const tiers=[...(meta?.assidTiers||[])].sort((a,b)=>b.min-a.min);for(const t of tiers)if(pct*100>=+t.min)return +t.pts;return 0}
+export function trimRange(k,t){if(t==='E')return seasonRange(k);if(String(t).startsWith('M:')){const m=t.slice(2);return{from:m+'-01',to:addDays(addMonths(m,1)+'-01',-1)}}const x=TRIM.find(z=>z[0]===t);const y=+k+x[4];return{from:`${y}-${x[2]}`,to:`${y}-${x[3]}`}}
+// Pontos de assiduidade proporcionais: 100% = assidMax pontos (por defeito 10), arredondado a 1 casa
+export function assidPts(meta,pct){if(pct==null)return 0;const mx=+(meta?.assidMax??10)||10;return Math.round(pct*mx*10)/10}
 export function pointsTable(club,ctx,meta,k,t){const w=+club.cfg?.pesoJ||0.2;const per=t==='E'?TRIM.map(x=>trimRange(k,x[0])):[trimRange(k,t)];const R=trimRange(k,t);
   const stP=per.map(r=>attStats(club,ctx,r.from,r.to,w));const stR=attStats(club,ctx,R.from,R.to,w);const o={};
   for(const a of Object.values(ctx.athletes)){const e=enr(a,k);if(!e)continue;
-    const as=stP.reduce((s,st)=>s+assidPts(meta,st[a.id]?.pct??null),0);
+    const as=Math.round(stP.reduce((s,st)=>s+assidPts(meta,st[a.id]?.pct??null),0)*10)/10;
     const prem=Object.values(ctx.awards||{}).filter(x=>x.ath===a.id&&x.data>=R.from&&x.data<=R.to).reduce((s,x)=>s+(+x.pts||0),0);
     const ev=Object.values(ctx.events||{}).filter(x=>x.data>=R.from&&x.data<=R.to&&x.atl?.[a.id]).reduce((s,x)=>s+(+x.pontos||0),0);
-    o[a.id]={id:a.id,turma:e.turma,pct:stR[a.id]?.pct??null,assid:as,prem,ev,tot:as+prem+ev}}return o}
+    o[a.id]={id:a.id,turma:e.turma,pct:stR[a.id]?.pct??null,assid:as,prem,ev,tot:Math.round((as+prem+ev)*10)/10}}return o}
 
 /* ---------- Testes físicos ---------- */
 export function bestOf(test,arr){const v=(arr||[]).filter(x=>x!==''&&x!=null&&!isNaN(+x)).map(Number);if(!v.length)return null;return test.melhor==='min'?Math.min(...v):Math.max(...v)}
@@ -146,6 +147,10 @@ export function fill(tpl,vars){return String(tpl||'').replace(/\{(\w+)\}/g,(_,k)
 export function joinPt(parts){return parts.length>1?parts.slice(0,-1).join(', ')+' e '+parts[parts.length-1]:(parts[0]||'')}
 export function payDetail(items){const parts=items.map(x=>`${MESES[+x.m.slice(5,7)-1].toLowerCase()} (${x.f} aula${x.f>1?'s':''}/semana · ${eur(x.v)})`);
   let s=joinPt(parts);if(items.length>1)s+=`, total ${eur(items.reduce((a,x)=>a+(+x.v||0),0))}`;return s}
+// Vários irmãos numa só mensagem: agrupa por mês. groups=[{nome,items:[{m,f,v}]}]
+export function sibPayDetail(groups){const ms=[...new Set(groups.flatMap(g=>g.items.map(x=>x.m)))].sort();let tot=0;
+  const parts=ms.map(m=>{const seg=groups.map(g=>{const x=g.items.find(i=>i.m===m);if(!x)return null;tot+=+x.v||0;return `${g.nome} · ${x.f} aula${x.f>1?'s':''}/semana · ${eur(x.v)}`}).filter(Boolean);return `${MESES[+m.slice(5,7)-1].toLowerCase()} (${seg.join('; ')})`});
+  return joinPt(parts)+`, total ${eur(tot)}`}
 export function feeDetail(items){const parts=items.map(x=>`${x.label} (${eur(x.v)})`);let s=joinPt(parts);if(items.length>1)s+=`, total ${eur(items.reduce((a,x)=>a+(+x.v||0),0))}`;return s}
 export function msgLink(tel,canal,text){let t=String(tel||'').replace(/\D/g,'');if(!t)return null;if(t.length===9)t='351'+t;
   return canal==='sms'?`sms:+${t}?body=${encodeURIComponent(text)}`:`https://wa.me/${t}?text=${encodeURIComponent(text)}`}
