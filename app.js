@@ -1,6 +1,6 @@
-import * as L from './logic.js?v=17';
-import {DB,init,api} from './store.js?v=17';
-import {seedClubs,seedMeta} from './seed.js?v=17';
+import * as L from './logic.js?v=18';
+import {DB,init,api} from './store.js?v=18';
+import {seedClubs,seedMeta} from './seed.js?v=18';
 
 const FIREBASE={apiKey:"AIzaSyC6LSMa62K2QOfQNqyJaK4n9uU8_ZbcvUA",authDomain:"wadosensei.firebaseapp.com",projectId:"wadosensei",storageBucket:"wadosensei.firebasestorage.app",messagingSenderId:"613268049409",appId:"1:613268049409:web:cbb2bd7de5f88e1bbcba00"};
 const DEMO=new URLSearchParams(location.search).has('demo');
@@ -10,7 +10,7 @@ const uid=()=>Math.random().toString(36).slice(2,8)+Date.now().toString(36).slic
 const copy=o=>JSON.parse(JSON.stringify(o));
 const {today,fmtD,eur,mShort,mLabel,DOW,DOWL,seasonLabel,nameOf}=L;
 const pref=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem('ws_'+k)||'null');localStorage.setItem('ws_'+k,JSON.stringify(v))}catch(e){return null}};
-const QS=new URLSearchParams(location.search);const QT=QS.get('tab')==='hoje'?'aulas':QS.get('tab');const UI={tab:['aulas','atletas','testes','contas','mais'].includes(QT)?QT:'aulas',club:QT?pref('club'):null,season:pref('season')||{},aul:{m:null,t:'',scroll:true},ath:{f:'ins',q:''},con:{v:null,m:null,qa:null,qv:'quotas'},pre:{t:null},sheetLive:null,draft:null,sw:{mode:'ind',t0:0,run:false,ath:null}};
+const QS=new URLSearchParams(location.search);const SS=(()=>{try{return JSON.parse(sessionStorage.getItem('ws_ui')||'null')}catch(e){return null}})();const QT=QS.get('tab')==='hoje'?'aulas':QS.get('tab');const UI={tab:['aulas','atletas','testes','contas','mais'].includes(QT)?QT:(SS?.tab||'aulas'),club:QT?pref('club'):(SS?.club||null),season:pref('season')||{},aul:{m:null,t:'',scroll:true},ath:{f:'ins',q:''},con:{v:null,m:null,qa:null,qv:'quotas'},pre:{t:null},sheetLive:null,draft:null,sw:{mode:'ind',t0:0,run:false,ath:null}};
 
 /* ---------- acesso a dados ---------- */
 const CL=()=>DB.clubs[UI.club];
@@ -56,7 +56,8 @@ function render(){
   const clubs=Object.values(DB.clubs).filter(c=>c.doc);
   if(!clubs.length){hdr.innerHTML='<h1>Wado Sensei</h1>';nav.innerHTML='';view.innerHTML=V.welcome();return}
   const sync=!navigator.onLine?'<span class="sync off" title="Sem rede — grava quando voltar">offline</span>':DB.pending?'<span class="sync">a gravar…</span>':'';
-  if(!UI.club||!CL()?.doc){hdr.innerHTML=`<h1>Wado Sensei</h1>${sync}`;nav.innerHTML='';view.innerHTML=V.picker(clubs);return}
+  if(!UI.club||!CL()?.doc){try{sessionStorage.removeItem('ws_ui')}catch(e){}hdr.innerHTML=`<h1>Wado Sensei</h1>${sync}`;nav.innerHTML='';view.innerHTML=V.picker(clubs);return}
+  try{sessionStorage.setItem('ws_ui',JSON.stringify({club:UI.club,tab:UI.tab}))}catch(e){}
   const k=K();
   hdr.innerHTML=`<button class="hb" data-a="toPicker" aria-label="Voltar aos clubes">‹</button><h1 class="hn">${esc(CD().nome)}</h1>${sync}
     <select data-c="season" aria-label="Época">${Object.keys(CD().epocas||{}).sort().map(s=>`<option value="${s}" ${s===k?'selected':''}>${seasonLabel(s)}</option>`).join('')}</select>`;
@@ -71,7 +72,7 @@ function fitList(){const box=$('#mlist');if(!box)return;const nav=$('#tabs');con
 addEventListener('resize',()=>fitList());
 const V={};
 const empty=t=>`<div class="empty">${t}</div>`;
-const back=t=>`<div class="ch"><button class="btn sm ghost" data-a="tab" data-t="mais">‹ Mais</button><h2 style="margin:0">${t}</h2><span></span></div>`;
+const back=t=>`<h2 class="ptitle">${t}</h2>`;
 
 V.welcome=()=>`<div class="card"><h2>Bem-vindo, Sensei</h2><p>Ainda não há clubes nesta conta. Posso criar já os dois clubes com tudo o que definimos: horários, turmas, valores e descontos.</p><p class="sm">Depois importa os atletas e o histórico de 25/26 em <b>Mais → Dados e backup → Importar backup</b>, com o ficheiro <b>cart-2025-26.json</b> (guardado só contigo, nunca no GitHub).</p>
   <button class="btn block" data-a="seedAll">Criar Cart Wado Karaté + Flexgym</button><button class="btn ghost block" data-a="newClub">Começar com um clube vazio</button>
