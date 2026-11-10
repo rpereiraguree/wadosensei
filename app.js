@@ -1,6 +1,6 @@
-import * as L from './logic.js';
-import {DB,init,api} from './store.js';
-import {seedClubs,seedMeta} from './seed.js';
+import * as L from './logic.js?v=14';
+import {DB,init,api} from './store.js?v=14';
+import {seedClubs,seedMeta} from './seed.js?v=14';
 
 const FIREBASE={apiKey:"AIzaSyC6LSMa62K2QOfQNqyJaK4n9uU8_ZbcvUA",authDomain:"wadosensei.firebaseapp.com",projectId:"wadosensei",storageBucket:"wadosensei.firebasestorage.app",messagingSenderId:"613268049409",appId:"1:613268049409:web:cbb2bd7de5f88e1bbcba00"};
 const DEMO=new URLSearchParams(location.search).has('demo');
@@ -63,8 +63,12 @@ function render(){
   const on=MAIS_SUB.includes(UI.tab)?'mais':UI.tab;
   nav.innerHTML=TABS.map(([t,l,ic])=>`<button data-a="tab" data-t="${t}" class="${on===t?'on':''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic}</svg>${l}</button>`).join('');
   view.innerHTML=(DB.error?`<div class="card banner sm">${esc(DB.error)} <button class="btn sm ghost" data-a="clrErr">OK</button></div>`:'')+(V[UI.tab]||V.aulas)();
-  if(UI.tab==='aulas'&&UI.aul.scroll){UI.aul.scroll=false;const el=$('#hojeAnchor'),box=$('#mlist');if(el&&box)box.scrollTop=Math.max(0,el.offsetTop-4)}
+  if(UI.tab==='aulas'){fitList();if(UI.aul.scroll){UI.aul.scroll=false;const el=$('#hojeAnchor'),box=$('#mlist');if(el&&box)box.scrollTop=Math.max(0,el.offsetTop-4)}}
 }
+// a lista do mês ocupa o espaço que sobra no ecrã, acima da barra de baixo
+function fitList(){const box=$('#mlist');if(!box)return;const nav=$('#tabs');const top=box.getBoundingClientRect().top+window.scrollY;
+  box.style.maxHeight=Math.max(260,window.innerHeight-top-(nav?.offsetHeight||64)-56)+'px'}
+addEventListener('resize',()=>fitList());
 const V={};
 const empty=t=>`<div class="empty">${t}</div>`;
 const back=t=>`<div class="ch"><button class="btn sm ghost" data-a="tab" data-t="mais">‹ Mais</button><h2 style="margin:0">${t}</h2><span></span></div>`;
