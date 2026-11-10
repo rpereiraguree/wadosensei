@@ -1,6 +1,6 @@
-import * as L from './logic.js?v=18';
-import {DB,init,api} from './store.js?v=18';
-import {seedClubs,seedMeta} from './seed.js?v=18';
+import * as L from './logic.js?v=19';
+import {DB,init,api} from './store.js?v=19';
+import {seedClubs,seedMeta} from './seed.js?v=19';
 
 const FIREBASE={apiKey:"AIzaSyC6LSMa62K2QOfQNqyJaK4n9uU8_ZbcvUA",authDomain:"wadosensei.firebaseapp.com",projectId:"wadosensei",storageBucket:"wadosensei.firebasestorage.app",messagingSenderId:"613268049409",appId:"1:613268049409:web:cbb2bd7de5f88e1bbcba00"};
 const DEMO=new URLSearchParams(location.search).has('demo');
@@ -61,15 +61,12 @@ function render(){
   const k=K();
   hdr.innerHTML=`<button class="hb" data-a="toPicker" aria-label="Voltar aos clubes">‹</button><h1 class="hn">${esc(CD().nome)}</h1>${sync}
     <select data-c="season" aria-label="Época">${Object.keys(CD().epocas||{}).sort().map(s=>`<option value="${s}" ${s===k?'selected':''}>${seasonLabel(s)}</option>`).join('')}</select>`;
-  const on=MAIS_SUB.includes(UI.tab)?'mais':UI.tab;
+  const on=MAIS_SUB.includes(UI.tab)?'mais':UI.tab==='mes'?'aulas':UI.tab;
   nav.innerHTML=TABS.map(([t,l,ic])=>`<button data-a="tab" data-t="${t}" class="${on===t?'on':''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic}</svg>${l}</button>`).join('');
   view.innerHTML=(DB.error?`<div class="card banner sm">${esc(DB.error)} <button class="btn sm ghost" data-a="clrErr">OK</button></div>`:'')+(V[UI.tab]||V.aulas)();
-  if(UI.tab==='aulas'){fitList();if(UI.aul.scroll){UI.aul.scroll=false;const el=$('#hojeAnchor'),box=$('#mlist');if(el&&box)box.scrollTop=Math.max(0,el.offsetTop-4)}}
+  if(UI.tab==='mes'&&UI.aul.scroll){UI.aul.scroll=false;const el=$('#hojeAnchor');if(el){const y=el.getBoundingClientRect().top+window.scrollY-($('#hdr').offsetHeight||60)-8;setTimeout(()=>window.scrollTo(0,Math.max(0,y)),0)}}
 }
 // a lista do mês ocupa o espaço que sobra no ecrã, acima da barra de baixo
-function fitList(){const box=$('#mlist');if(!box)return;const nav=$('#tabs');const top=box.getBoundingClientRect().top+window.scrollY;
-  box.style.maxHeight=Math.max(260,window.innerHeight-top-(nav?.offsetHeight||64)-56)+'px'}
-addEventListener('resize',()=>fitList());
 const V={};
 const empty=t=>`<div class="empty">${t}</div>`;
 const back=t=>`<h2 class="ptitle">${t}</h2>`;
@@ -113,17 +110,19 @@ function alertRows(){const cd=CD(),k=K(),t=today(),cx=ctx(),M=META();const al=[]
   if(!ins.length)al.push(`<div class="srow"><div class="grow"><b>Época ${seasonLabel(k)} sem atletas inscritos</b><div class="muted sm">Inscreve quem continua e adiciona os novos.</div></div><button class="btn sm" data-a="goInscrever">Inscrever</button></div>`);
   return al}
 function renderAlerts(){const al=alertRows();openSheet(shH('Alertas')+`<div class="card">${al.length?al.join(''):'<div class="muted sm">Tudo em dia.</div>'}</div>`)}
-V.aulas=()=>{const cd=CD(),k=K(),t=today(),cx=ctx(),ep=cd.epocas[k]||{};
+V.aulas=()=>{const cd=CD(),t=today(),cx=ctx();
   let d=t,ss=sessionsOn(t).filter(s=>s.estado!=='feriado');if(!ss.length){for(let i=1;i<15&&!ss.length;i++){d=L.addDays(t,i);ss=sessionsOn(d).filter(s=>s.estado!=='feriado')}}
   const nextEv=Object.values(cx.events).filter(e=>e.data>=t&&e.data<=L.addDays(t,45)).sort((a,b)=>a.data<b.data?-1:1).slice(0,3);
-  let h=`<div class="topcard"><div class="ch"><h3>${d===t?'Aulas de hoje':'Próximas aulas'}</h3><span class="muted sm">${DOWL[L.wdOf(d)]} ${fmtD(d)}</span></div>
+  const al=alertRows().length;
+  return `<div class="topcard"><div class="ch"><h3>${d===t?'Aulas de hoje':'Próximas aulas'}</h3><span class="muted sm">${DOWL[L.wdOf(d)]} ${fmtD(d)}</span></div>
     ${ss.length?`<div class="list">${ss.map(s=>sessRow(s)).join('')}</div>`:empty('Sem aulas nos próximos dias.')}
-    ${nextEv.length?`<div class="list">${nextEv.map(e=>evRow(e,true)).join('')}</div>`:''}</div>`;
+    ${nextEv.length?`<div class="list">${nextEv.map(e=>evRow(e,true)).join('')}</div>`:''}</div>
+   <div class="row gap"><button class="btn grow" data-a="goMes">Aulas do mês</button><button class="btn ghost" data-a="addMenu">+ Adicionar</button><button class="btn ${al?'alert':'ghost'}" data-a="showAlerts">${al} Alerta${al===1?'':'s'}</button></div>`};
+V.mes=()=>{const cd=CD(),k=K(),t=today(),cx=ctx(),ep=cd.epocas[k]||{};
   const months=[];if(ep.inicio){let m=ep.inicio.slice(0,7);const end=(ep.fim||L.addDays(ep.inicio,330)).slice(0,7);while(m<=end){months.push(m);m=L.addMonths(m,1)}}
   if(!UI.aul.m||!months.includes(UI.aul.m))UI.aul.m=months.includes(t.slice(0,7))?t.slice(0,7):months[months.length-1];const m=UI.aul.m;
-  const al=alertRows().length;
-  h+=`<div class="row gap"><select data-c="aulM" class="grow msel">${months.map(x=>`<option value="${x}" ${x===m?'selected':''}>${mShort(x)} ${x.slice(0,4)}</option>`).join('')}</select><button class="btn" data-a="newRepo">+ Reposição</button><button class="btn ${al?'alert':'ghost'}" data-a="showAlerts">${al} Alerta${al===1?'':'s'}</button></div>
-   <div class="row gap" style="margin-top:8px"><button class="btn ghost grow" data-a="newEvA">+ Evento</button><button class="btn ghost grow" data-a="planMes">🖨 Plano do mês</button></div>
+  let h=`<h2 class="ptitle">Aulas do mês</h2><div class="row gap"><select data-c="aulM" class="grow msel">${months.map(x=>`<option value="${x}" ${x===m?'selected':''}>${mLabel(x)}</option>`).join('')}</select></div>
+   <div class="row gap" style="margin-top:8px"><button class="btn grow" data-a="addMenu">+ Adicionar</button><button class="btn ghost grow" data-a="planMes">🖨 Plano do mês</button></div>
    <div class="chips"><button class="chip ${!UI.aul.t?'on':''}" data-a="aulT" data-t="">Todas</button>${cd.turmas.map(x=>`<button class="chip ${UI.aul.t===x.id?'on':''}" data-a="aulT" data-t="${x.id}">${esc(x.nome)}</button>`).join('')}</div>`;
   const last=L.addDays(L.addMonths(m,1)+'-01',-1);let ms=L.sessionsBetween(cd,CL().sessions,m+'-01',last);if(UI.aul.t)ms=ms.filter(s=>s.turma===UI.aul.t);
   const evs=Object.values(cx.events).filter(e=>e.data>=m+'-01'&&e.data<=last);
@@ -131,8 +130,11 @@ V.aulas=()=>{const cd=CD(),k=K(),t=today(),cx=ctx(),ep=cd.epocas[k]||{};
   const given=ms.filter(L.isGiven).length,canc=ms.filter(s=>s.estado==='cancelada').length,por=ms.filter(s=>s.virtual&&s.estado!=='feriado'&&s.data<t).length;
   const items=[...ms.map(s=>({d:s.data,k:(s.ini||'')+'0',s})),...evs.map(e=>({d:e.data,k:'zz',e}))].sort((a,b)=>a.d!==b.d?(a.d<b.d?-1:1):(a.k<b.k?-1:1));
   let anch=false;const rows=items.map(x=>{let pre='';if(!anch&&x.d>=t){anch=true;pre='<div id="hojeAnchor"></div>'}return pre+(x.s?sessRow(x.s,true):evRow(x.e))});
-  h+=`<p class="muted sm">${given} dadas · ${canc} canceladas${por?` · <b style="color:var(--warn)">${por} por registar</b>`:''}${evs.length?` · ${evs.length} evento(s)`:''}</p><div class="list mlist" id="mlist">${rows.join('')}</div>`;
-  h+=`<button class="btn ghost block" data-a="newExtra">+ Aula extra</button>`;return h};
+  h+=`<p class="muted sm">${given} dadas · ${canc} canceladas${por?` · <b style="color:var(--warn)">${por} por registar</b>`:''}${evs.length?` · ${evs.length} evento(s)`:''}</p><div class="list">${rows.join('')}</div>`;return h};
+function renderAdd(){openSheet(shH('Adicionar')+`<div class="list">
+  <div class="li" data-a="addPick" data-v="repo"><span style="font-size:22px">🔁</span><div class="grow"><div class="nm">Reposição</div><div class="muted sm">Repõe uma aula cancelada</div></div><span class="muted">›</span></div>
+  <div class="li" data-a="addPick" data-v="extra"><span style="font-size:22px">➕</span><div class="grow"><div class="nm">Aula extra</div><div class="muted sm">Aula fora do horário, sem repor nenhuma</div></div><span class="muted">›</span></div>
+  <div class="li" data-a="addPick" data-v="ev"><span style="font-size:22px">📅</span><div class="grow"><div class="nm">Evento</div><div class="muted sm">Estágio, jornada técnica, exame, prova, cintos</div></div><span class="muted">›</span></div></div>`)}
 
 function getSessById(id){const st=CL().sessions[id];if(st)return{...copy(st),id,virtual:false};const d=id.split('_')[0];const v=sessionsOn(d).find(s=>s.id===id);return v?copy(v):null}
 function putSess(s){const d={...s};delete d.virtual;put('sessions',d.id,d)}
@@ -205,19 +207,21 @@ function athDebt(a){const cd=CD(),k=K(),cx=ctx(),M=META(),t=today();const items=
   for(const f of Object.values(cx.fees))if(f.ath===a.id&&f.estado==='falta')items.push({tipo:'fee',f,v:L.feeValue(M,f,a,t)});
   for(const ev of Object.values(cx.events)){const x=ev.atl?.[a.id];if(x&&x.estado==='falta'&&+ev.valor)items.push({tipo:'ev',ev,v:+(x.v??ev.valor)||0})}
   return{items,total:L.round2(items.reduce((s,x)=>s+x.v,0))}}
-V.atletas=()=>{const u=UI.ath;return `<div class="row gap"><input placeholder="Procurar nome ou nº FNKP" value="${esc(u.q)}" data-i="athQ"><button class="btn" data-a="newAth">+ Novo</button></div>
-  <div class="chips">${[['ins','Inscritos '+seasonLabel(K())],['deve','Em falta'],['out','Não inscritos'],['all','Todos']].map(([v,l])=>`<button class="chip ${u.f===v?'on':''}" data-a="athF" data-f="${v}">${l}</button>`).join('')}<button class="chip" data-a="importList">Importar lista</button></div><div id="athList">${athList()}</div>`};
-function athList(){const u=UI.ath,k=K(),cd=CD(),q=u.q.trim().toLowerCase(),m=curMonth(k),cx=ctx(),graus=META().graus||[];const st=L.attStats(cd,cx,L.seasonRange(k).from,L.seasonRange(k).to,+cd.cfg?.pesoJ||0.2);
+V.atletas=()=>{const u=UI.ath;return `<div class="row gap"><input placeholder="Procurar nome ou nº FNKP/AWIKP" value="${esc(u.q)}" data-i="athQ"><button class="btn" data-a="newAth">+ Novo</button></div>
+  <div class="chips">${[['ins','Inscritos '+seasonLabel(K())],['deve','Em falta'],['out','Não inscritos'],['all','Todos']].map(([v,l])=>`<button class="chip ${u.f===v?'on':''}" data-a="athF" data-f="${v}">${l}</button>`).join('')}<button class="chip" data-a="importList">Importar lista</button></div>
+  ${u.f==='deve'?`<div class="chips sub">${[['','Todos'],['mens','Mensalidades'],['fee','Quotas e seguro'],['ev','Eventos']].map(([v,l])=>`<button class="chip ${(u.dt||'')===v?'on':''}" data-a="athDT" data-v="${v}">${l}</button>`).join('')}</div>`:''}<div id="athList">${athList()}</div>`};
+function athList(){const u=UI.ath,k=K(),cd=CD(),q=u.q.trim().toLowerCase(),m=curMonth(k),cx=ctx(),graus=META().graus||[];const tm=today().slice(0,7);const left=a=>{const e=L.enr(a,k);return e&&e.ate&&e.ate<tm?1:0};const st=L.attStats(cd,cx,L.seasonRange(k).from,L.seasonRange(k).to,+cd.cfg?.pesoJ||0.2);
   const debt={};const D=a=>debt[a.id]||(debt[a.id]=athDebt(a));
-  let as=Object.values(cx.athletes).filter(a=>{const e=L.enr(a,k);if((u.f==='ins'||u.f==='deve')&&!e)return false;if(u.f==='out'&&e)return false;if(u.f==='deve'&&!D(a).total)return false;return !q||a.nome.toLowerCase().includes(q)||(a.curto||'').toLowerCase().includes(q)||String(a.fnkp||'').includes(q)})
-    .sort((a,b)=>graus.indexOf(b.grau)-graus.indexOf(a.grau)||nameOf(a).localeCompare(nameOf(b)));
+  let as=Object.values(cx.athletes).filter(a=>{const e=L.enr(a,k);if((u.f==='ins'||u.f==='deve')&&!e)return false;if(u.f==='out'&&e)return false;if(u.f==='deve'&&!D(a).items.some(x=>!u.dt||x.tipo===u.dt))return false;return !q||a.nome.toLowerCase().includes(q)||(a.curto||'').toLowerCase().includes(q)||String(a.fnkp||'').includes(q)||String(a.awikp||'').includes(q)})
+    .sort((a,b)=>(left(a)-left(b))||graus.indexOf(b.grau)-graus.indexOf(a.grau)||nameOf(a).localeCompare(nameOf(b)));
   if(!as.length)return empty(u.f==='ins'?'Ainda ninguém inscrito nesta época. Abre "Não inscritos" para inscrever quem continua, ou adiciona novos.':u.f==='deve'?'Ninguém com pagamentos em falta.':'Sem resultados.');
   const row=a=>{const e=L.enr(a,k);const x=st[a.id];const ag=a.nasc?L.ageAt(a.nasc,today()):null;
     const sub=e?[`${L.freqAt(e,m)}×/sem`,ag!=null?ag+' anos':'',e.ate?'saiu '+mShort(e.ate):''].filter(Boolean).join(' · '):[ag!=null?ag+' anos':'',a.fnkp?'FNKP '+a.fnkp:''].filter(Boolean).join(' · ');const sub2=e&&x?.pct!=null?'assid. '+Math.round(x.pct*100)+'%':'';
-    let tag='';if(e){const dd=D(a);tag=`<button class="tag ${dd.total?'t-bad':'t-ok'}" style="padding:7px 10px" data-a="openPay" data-id="${a.id}">${dd.total?'Pagamentos em falta':'Pagamentos em dia'}</button>`}else tag=`<button class="btn sm" data-a="quickEnr" data-id="${a.id}">Inscrever</button>`;
-    return `<div class="li" data-a="editAth" data-id="${a.id}"><div class="grow"><div class="nm">${esc(nameOf(a))}${!a.fnkp?' <span class="tag t-warn" style="font-size:10px">FNKP?</span>':''}</div>${a.grau?`<div class="grauL">${esc(a.grau)}</div>`:''}<div class="muted sm">${esc(sub)}</div>${sub2?`<div class="muted sm">${sub2}</div>`:''}</div>${tag}</div>`};
+    let tag='';if(e){const dd=D(a);tag=`<button class="paybtn ${dd.total?'t-bad':'t-ok'}" data-a="openPay" data-id="${a.id}">${dd.total?'Pagamentos<br>em falta':'Pagamentos<br>em dia'}</button>`}else tag=`<button class="btn sm" data-a="quickEnr" data-id="${a.id}">Inscrever</button>`;
+    return `<div class="li ${left(a)?'saiu':''}" data-a="editAth" data-id="${a.id}"><div class="grow"><div class="nm">${esc(nameOf(a))}${!a.fnkp?' <span class="tag t-warn" style="font-size:10px">FNKP?</span>':''}</div>${a.grau?`<div class="grauL">${esc(a.grau)}</div>`:''}<div class="muted sm">${esc(sub)}</div>${sub2?`<div class="muted sm">${sub2}</div>`:''}</div>${tag}</div>`};
   if(u.f==='ins'||u.f==='deve')return cd.turmas.map(t=>{const g=as.filter(a=>L.enr(a,k).turma===t.id);return g.length?`<div class="list"><div class="gh">${esc(t.nome)} · ${g.length}</div>${g.map(row).join('')}</div>`:''}).join('');
   return `<div class="list">${as.map(row).join('')}</div>`}
+const MAILS='<svg class="ms" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
 const MAILI='<svg class="mi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
 const ST={pago:['Pago','t-ok'],isento:['Isento','t-mut'],isentoFixo:['Isento fixo','t-mut'],semPres:['Sem presenças','t-mut'],falta:['Em falta','t-bad']};
 const stTag=s=>`<span class="tag ${ST[s.st][1]}">${ST[s.st][0]}</span>`;
@@ -226,13 +230,14 @@ function newEnr(prev,k){const cd=CD();const t=prev?.turma||cd.turmas[0].id;const
   if(prev?.dias?.length&&cur.length){const out=[];for(const d of [...prev.dias].sort()){const c=cur.includes(d)?d:cur.filter(x=>!out.includes(x)).sort((a,b)=>Math.abs(a-d)-Math.abs(b-d))[0];if(c!=null&&!out.includes(c))out.push(c)}dias=out.sort()}const ep=cd.epocas[k];let desde=today().slice(0,7);if(ep?.meses?.length&&desde<ep.meses[0])desde=ep.meses[0];
   return{turma:t,dias,freq:[{desde,n:prev?L.freqAt(prev,'9999-12'):Math.min(2,dias.length||1)}],isento:!!prev?.isento,desde,ate:'',manual:[]}}
 function athDraft(id,tab){const k=K();const a=id?copy(ctx().athletes[id]):{id:'',fnkp:'',nome:'',nasc:'',curto:'',enc:'',tel:'',canal:'wa',notas:'',grau:'',irmaos:'',irmaoOutra:false,trazidoPor:'',insc:{}};
-  a.insc=a.insc||{};if(!id)a.insc[k]=newEnr(null,k);UI.draft={kind:'ath',isNew:!id,a,tab:tab||'dados'};UI.sheetLive=renderAth;renderAth()}
+  a.insc=a.insc||{};if(!id)a.insc[k]=newEnr(null,k);UI.draft={kind:'ath',isNew:!id,a,tab:tab||(id?'evo':'dados')};UI.sheetLive=renderAth;renderAth()}
 function renderAth(){if(UI.draft?.kind!=='ath')return;const{a,isNew}=UI.draft,k=K(),cd=CD(),cx=ctx(),M=META(),e=a.insc[k]||null,m=curMonth(k);const tab=UI.draft.tab;
-  const tabs=isNew?[['dados','Dados'],['insc','Inscrição']]:[['dados','Dados'],['insc','Inscrição'],['pag','Pagamentos'],['evo','Evolução']];
+  const tabs=isNew?[['dados','Dados'],['insc','Inscrição']]:[['evo','Evolução'],['pag','Pagamentos'],['dados','Dados'],['insc','Inscrição']];
   let h=shH(isNew?'Novo atleta':esc(nameOf(a))+(a.grau?` <span class="grau">${esc(a.grau)}</span>`:''))+`<div class="seg">${tabs.map(([v,l])=>`<button class="${tab===v?'on':''}" data-a="athTab" data-v="${v}">${l}</button>`).join('')}</div>`;
   if(tab==='dados'){const groups=[...new Set(Object.values(cx.athletes).map(x=>x.irmaos).filter(Boolean))];
     h+=`<div class="card"><label>Nome completo</label><input value="${esc(a.nome)}" data-i="af" data-k="nome">
     <div class="grid2"><div><label>Nome curto</label><input value="${esc(a.curto)}" placeholder="${esc(L.shortName(a.nome))}" data-i="af" data-k="curto"></div><div><label>Nº FNKP</label><input value="${esc(a.fnkp)}" data-i="af" data-k="fnkp" inputmode="numeric"></div>
+    <div><label>Nº AWIKP</label><input value="${esc(a.awikp||'')}" data-i="af" data-k="awikp" inputmode="numeric"></div><div><label>Nº Cartão de Cidadão</label><input value="${esc(a.cc||'')}" data-i="af" data-k="cc" autocomplete="off"></div>
     <div><label>Nascimento</label><input type="date" value="${esc(a.nasc)}" data-c="af" data-k="nasc"></div><div><label>Idade / escalão</label><div class="ro">${a.nasc?L.ageAt(a.nasc,today())+' anos · '+L.escalao(a.nasc,k):'—'}</div></div>
     <div><label>Encarregado / contacto</label><input value="${esc(a.enc)}" data-i="af" data-k="enc"></div><div><label>Telemóvel</label><input value="${esc(a.tel)}" data-i="af" data-k="tel" inputmode="tel"></div></div>
     <label>Mensagens por</label><div class="chips">${[['wa','WhatsApp'],['sms','SMS']].map(([v,l])=>`<button class="chip ${(a.canal||'wa')===v?'on':''}" data-a="afCanal" data-v="${v}">${l}</button>`).join('')}${a.tel&&!isNew?`<button class="chip" data-a="contact">Contactar</button>`:''}</div>
@@ -253,7 +258,7 @@ function renderAth(){if(UI.draft?.kind!=='ath')return;const{a,isNew}=UI.draft,k=
         if(!isNew&&cx.athletes[a.id]){const v=L.monthValue(cd,a,cx,k,m);h+=`<p class="sm" style="margin-top:10px">Valor em ${mShort(m).toLowerCase()}: <b>${eur(v.v)}</b>${v.desc.length?' <span class="muted">('+eur(v.base)+' '+v.desc.map(x=>'− '+x[1]+' '+x[0].toLowerCase()).join(' ')+(v.descTot<v.desc.reduce((s,x)=>s+x[1],0)?', máx. '+eur(v.descTot):'')+')</span>':''}${v.manual?' <span class="muted">('+esc(v.manual)+')</span>':''}</p>`}}}
     h+='</div>'}
   if(tab==='pag'&&!isNew&&cx.athletes[a.id]){const A0=cx.athletes[a.id];const dd=athDebt(A0);
-    h+=`<div class="card ${dd.total?'banner':''}"><div class="ch"><div><small class="muted">Em atraso</small><div style="font-size:22px;font-weight:700;color:${dd.total?'var(--bad)':'var(--ok)'}">${dd.total?eur(dd.total):'Em dia'}</div></div>${dd.items.some(x=>x.tipo==='mens')?`<button class="btn sm ghost ${A0.lemb?'sent':''}" data-a="remindA" data-id="${a.id}">${A0.lemb?'Lembrado '+fmtD(A0.lemb).slice(0,5):'Lembrar'}</button>`:''}</div></div>`;
+    h+=`<div class="card ${dd.total?'banner':''}"><div class="ch"><div><small class="muted">Em atraso</small><div style="font-size:22px;font-weight:700;color:${dd.total?'var(--bad)':'var(--ok)'}">${dd.total?eur(dd.total):'Em dia'}</div></div>${dd.items.some(x=>x.tipo==='mens')?`<button class="btn lembrar ${A0.lemb?'ghost sent':''}" data-a="remindA" data-id="${a.id}">${MAILS}${A0.lemb?'Lembrado '+fmtD(A0.lemb).slice(0,5):'Lembrar'}</button>`:''}</div></div>`;
     if(cd.modelo==='gestao'&&L.enr(A0,k)){const ms=(cd.epocas[k].meses||[]);const rows=ms.map(mm=>({mm,s:L.monthStatus(cd,A0,cx,k,mm)})).filter(x=>x.s);
       const lastPaid=rows.filter(x=>x.s.st==='pago').map(x=>({m:x.mm,d:x.s.d})).sort((x,y)=>(x.d||'')<(y.d||'')?1:-1)[0];const sent=lastPaid&&cx.payments[lastPaid.m]?.[a.id]?.msg;
       h+=`<div class="ch" style="margin-top:6px"><h3>Mensalidades ${seasonLabel(k)}</h3>${dd.items.some(x=>x.tipo==='mens')?'<button class="btn sm" data-a="payAll" data-id="'+a.id+'">Pagar todos em falta</button>':''}</div>
@@ -262,10 +267,11 @@ function renderAth(){if(UI.draft?.kind!=='ath')return;const{a,isNew}=UI.draft,k=
         ${lastPaid?`<button class="btn block mail ${sent?'sent':''}" data-a="payMsg" data-id="${a.id}" data-m="${lastPaid.m}">${MAILI}<span>${sent?'Confirmação enviada · reenviar':'Enviar confirmação'}</span></button>`:''}
         <p class="muted sm">Toca no estado de cada mês: Em falta → Pago → Isento. Toca no valor pago para o corrigir.</p>`}
     const fees=Object.values(cx.fees).filter(f=>f.ath===a.id).sort((x,y)=>x.ano<y.ano?1:-1);const evs=Object.values(cx.events).filter(ev=>ev.atl?.[a.id]).sort((x,y)=>x.data<y.data?1:-1);
-    if(fees.length||evs.length){const anyC=fees.some(f=>f.estado==='cobrado');
-      h+=`<h3 style="margin:14px 0 8px">Quotas, seguro e eventos</h3><div class="list">${fees.map(f=>`<div class="li"><div class="grow"><div class="nm">${L.QITEMS.find(q=>q[0]===f.item)[1]} ${f.ano}${f.red?' (red.)':''}</div><div class="muted sm">${eur(L.feeValue(M,f,A0,today()))}${f.dCob?' · cobrado a '+fmtD(f.dCob):''}</div></div><button class="tag ${f.estado==='entregue'?'t-ok':f.estado==='cobrado'?'t-blue':'t-bad'}" style="padding:7px 11px" data-a="feeCycle" data-id="${f.id}">${f.estado==='entregue'?'Entregue':f.estado==='cobrado'?'Cobrado':'Em falta'}</button></div>`).join('')}
-        ${evs.map(ev=>{const x=ev.atl[a.id];return `<div class="li"><div class="grow"><div class="nm">${esc(ev.nome)}</div><div class="muted sm">${fmtD(ev.data)} · ${eur(x.v??ev.valor)}${x.grau?' · '+esc(x.grau):''}</div></div>${+ev.valor?`<button class="tag ${x.estado==='entregue'?'t-ok':x.estado==='cobrado'?'t-blue':'t-bad'}" style="padding:7px 11px" data-a="evCycleA" data-ev="${ev.id}" data-id="${a.id}">${x.estado==='entregue'?'Entregue':x.estado==='cobrado'?'Cobrado':'Em falta'}</button>`:'<span class="tag t-mut">Participa</span>'}</div>`}).join('')}</div>
-        ${fees.length?`<button class="btn block mail ${fees.some(f=>f.estado==='cobrado'&&f.msg)?'sent':''}" data-a="feeMsgA" data-id="${a.id}">${MAILI}<span>${anyC?'Enviar confirmação das quotas e seguro':'Enviar confirmação das quotas e seguro (marca primeiro como cobradas)'}</span></button>`:''}`}}
+    if(fees.length||evs.length){const ys=[...new Set(fees.map(f=>f.ano))].sort().reverse();const st=x=>`class="tag ${x==='entregue'?'t-ok':x==='cobrado'?'t-blue':'t-bad'}" style="padding:7px 11px"`;const sl=x=>x==='entregue'?'Entregue':x==='cobrado'?'Cobrado':'Em falta';
+      h+=ys.map(y=>{const fy=fees.filter(f=>f.ano===y).sort((p,q)=>L.QITEMS.findIndex(z=>z[0]===p.item)-L.QITEMS.findIndex(z=>z[0]===q.item));const paid=fy.filter(f=>f.estado!=='falta');const sent=paid.length&&paid.every(f=>f.msg);
+        return `<h3 style="margin:14px 0 8px">Quotas e seguro ${y}</h3><div class="list">${fy.map(f=>`<div class="li"><div class="grow"><div class="nm">${L.QITEMS.find(q=>q[0]===f.item)[1]}${f.red?' (red.)':''}</div><div class="muted sm">${eur(L.feeValue(M,f,A0,today()))}${f.dCob?' · pago a '+fmtD(f.dCob):''}</div></div><button ${st(f.estado)} data-a="feeCycle" data-id="${f.id}">${sl(f.estado)}</button></div>`).join('')}</div>
+          <button class="btn block mail ${sent?'sent':''}" data-a="feeMsgA" data-id="${a.id}" data-y="${y}">${MAILI}<span>${sent?`Confirmação ${y} enviada · reenviar`:`Enviar confirmação ${y}`}</span></button>`}).join('');
+      if(evs.length)h+=`<h3 style="margin:14px 0 8px">Eventos</h3><div class="list">${evs.map(ev=>{const x=ev.atl[a.id];return `<div class="li"><div class="grow"><div class="nm">${esc(ev.nome)}</div><div class="muted sm">${fmtD(ev.data)} · ${eur(x.v??ev.valor)}${x.grau?' · '+esc(x.grau):''}</div></div>${+ev.valor?`<button ${st(x.estado)} data-a="evCycleA" data-ev="${ev.id}" data-id="${a.id}">${sl(x.estado)}</button>`:'<span class="tag t-mut">Participa</span>'}</div>`}).join('')}</div>`}}
   if(tab==='evo'&&!isNew&&cx.athletes[a.id]){const pts=L.pointsTable(cd,cx,M,k,'E')[a.id];const rows=Object.keys(cd.epocas).sort().reverse().map(sk=>{const r=L.seasonRange(sk);const x=L.attStats(cd,cx,r.from,r.to,+cd.cfg?.pesoJ||0.2)[a.id];return x?`<div class="srow"><span>${seasonLabel(sk)}</span><span class="muted sm">${x.P} P · ${x.J} J de ${L.fmtNum(x.exp,x.exp%1?1:0)} previstas</span><b>${Math.round(x.pct*100)}%</b></div>`:''}).join('');
     h+=`<div class="card"><h3>Assiduidade e pontos</h3>${rows||'<div class="muted sm">Sem registos.</div>'}${pts?`<div class="srow"><span>Pontos ${seasonLabel(k)}</span><span class="muted sm">assid. ${pts.assid} · prémios ${pts.prem} · eventos ${pts.ev}</span><b>${pts.tot}</b></div>`:''}</div>`;
     const charts=(M.tests||[]).map(t=>{const hs=L.testHistory(cx.tests,a.id,t.id).map(x=>({d:x.data,v:L.bestOf(t,x.r)})).filter(x=>x.v!=null);return hs.length?`<div class="tchart"><div class="sm"><b>${esc(t.nome)}</b> <span class="muted">${esc(t.un)}</span></div>${spark(hs,t)}</div>`:''}).join('');
@@ -368,8 +374,8 @@ CV.quotas=()=>{const cx=ctx(),M=META(),t=today(),ms=L.moneySummary(M,cx,t);
     if(!M.quotas?.[Y]||!Object.values(M.quotas[Y]).some(x=>+x.norm))h+=`<div class="card banner sm" style="margin-top:10px">Os valores das quotas de ${Y} ainda não estão definidos. <button class="btn sm ghost" data-a="tab" data-t="geral">Definir valores</button></div>`;
     const fees=Object.values(cx.fees).filter(f=>f.ano===Y);const by={};fees.forEach(f=>(by[f.ath]=by[f.ath]||{})[f.item]=f);
     const ids=Object.keys(by).sort((a,b)=>N(a).localeCompare(N(b)));
-    h+=ids.length?`<div class="list" style="margin-top:10px">${ids.map(id=>{const a=cx.athletes[id];const any=Object.values(by[id]).some(f=>f.estado==='cobrado');
-      return `<div class="li"><div class="grow"><div class="nm">${esc(N(id))}</div><div class="qchips">${L.QITEMS.map(([it,l])=>{const f=by[id][it];if(!f)return '';return `<button class="tag ${f.estado==='entregue'?'t-ok':f.estado==='cobrado'?'t-blue':'t-bad'}" data-a="feeCycle" data-id="${f.id}">${l.slice(0,3)}${f.red?'·r':''} ${L.fmtNum(L.feeValue(M,f,a,t),2)}€</button>`}).join('')}</div></div>${any?(()=>{const sent=Object.values(by[id]).some(f=>f.estado==='cobrado'&&f.msg);return `<button class="btn sm ghost ${sent?'sent':''}" data-a="feeMsg" data-id="${id}" data-y="${Y}">${sent?'✉✓':'✉'}</button>`})():''}</div>`}).join('')}</div>
+    h+=ids.length?`<div class="list" style="margin-top:10px">${ids.map(id=>{const a=cx.athletes[id];const any=Object.values(by[id]).some(f=>f.estado!=='falta');
+      return `<div class="li"><div class="grow"><div class="nm">${esc(N(id))}</div><div class="qchips">${L.QITEMS.map(([it,l])=>{const f=by[id][it];if(!f)return '';return `<button class="tag ${f.estado==='entregue'?'t-ok':f.estado==='cobrado'?'t-blue':'t-bad'}" data-a="feeCycle" data-id="${f.id}">${l.slice(0,3)}${f.red?'·r':''} ${L.fmtNum(L.feeValue(M,f,a,t),2)}€</button>`}).join('')}</div></div>${any?(()=>{const sent=Object.values(by[id]).some(f=>f.estado!=='falta'&&f.msg);return `<button class="btn sm ghost ${sent?'sent':''}" data-a="feeMsg" data-id="${id}" data-y="${Y}">${sent?'✉✓':'✉'}</button>`})():''}</div>`}).join('')}</div>
       <button class="btn ghost block" data-a="deliverAll" data-y="${Y}">Marcar todos os cobrados como entregues</button>`:empty(`Sem quotas de ${Y}. Usa “Gerar ${Y}” para criar as quotas dos atletas inscritos.`);
     h+=`<p class="muted sm">Toca em cada quota: Em falta → Cobrado → Entregue. Infantil até aos 9 anos (idade no dia da cobrança). “r” = valor reduzido de quem entrou entre setembro e dezembro.</p>`}
   else{const evs=Object.values(cx.events).sort((a,b)=>a.data<b.data?1:-1);
@@ -384,9 +390,10 @@ function renderEv(){const{ev,isNew}=UI.draft,k=K(),M=META();const as=athsIn(k,''
   <label>Local</label><input value="${esc(ev.local||'')}" data-i="evf" data-k="local" placeholder="ex.: Pombal">
   <label>Horário (uma linha por sessão: descrição; hora)</label><textarea data-i="evf" data-k="horario" placeholder="Tradicional (Jovens e Adultos); 10h00 – 13h00&#10;Karaté Games – Lúdico (Crianças); 15h00 – 17h00">${esc(ev.horario||'')}</textarea>
   ${others.length?`<label>Evento da associação</label><button class="chip ${ev.assoc?'on':''}" style="width:100%;padding:9px" data-a="evAssoc">${ev.assoc?'Sim — aparece em todos os clubes':'Não — só neste clube'}</button><p class="muted sm">Num evento da associação, nome, data, local, horário, valor e pontos ficam iguais em todos os clubes. Os atletas e os pagamentos são de cada clube.</p>`:''}</div>
-  <h3 style="margin:12px 0 6px">Atletas · ${Object.keys(ev.atl).length}</h3><div class="chips">${as.map(a=>`<button class="chip ${ev.atl[a.id]?'on':''}" data-a="evAth" data-id="${a.id}">${esc(nameOf(a))}</button>`).join('')}</div>`;
+  <details class="part" ${UI.draft.partOpen||Object.keys(ev.atl).length?'open':''}><summary><b>Participantes deste clube · ${Object.keys(ev.atl).length}</b> <span class="muted">(opcional: para cobrar, dar pontos ou registar o grau)</span></summary><div class="chips">${as.map(a=>`<button class="chip ${ev.atl[a.id]?'on':''}" data-a="evAth" data-id="${a.id}">${esc(nameOf(a))}</button>`).join('')}</div>`;
   const sel=Object.keys(ev.atl);if(sel.length)h+=`<div class="list">${sel.sort((a,b)=>N(a).localeCompare(N(b))).map(id=>{const x=ev.atl[id];return `<div class="li"><div class="grow nm">${esc(N(id))}</div>${ev.tipo==='exame'?`<select data-c="evGrau" data-id="${id}" style="width:auto">${['',...(M.graus||[])].map(g=>`<option ${x.grau===g?'selected':''}>${esc(g)}</option>`).join('')}</select>`:''}${+ev.valor?`<button class="tag ${x.estado==='entregue'?'t-ok':x.estado==='cobrado'?'t-blue':'t-bad'}" data-a="evCycle" data-id="${id}">${x.estado==='entregue'?'Entregue':x.estado==='cobrado'?'Cobrado':'Em falta'}</button>`:''}</div>`}).join('')}</div>`;
   if(ev.tipo==='exame')h+=`<p class="muted sm">No exame, o grau escolhido passa a ser a graduação do atleta ao guardar.</p>`;
+  h+=`</details>`;
   h+=`<button class="btn block" data-a="saveEv">Guardar</button>${isNew?'':'<button class="btn danger block" data-a="delEv">Apagar</button>'}`;
   const b=$('#sheetBody'),sc=b.scrollTop;openSheet(h);b.scrollTop=sc}
 function movDraft(id){const x=id?copy(ctx().ledger[id]):{id:'',tipo:'saida',data:today(),desc:'',cat:'Material',v:''};UI.draft={kind:'mov',isNew:!id,x};UI.sheetLive=null;renderMov()}
@@ -417,7 +424,7 @@ V.premios=()=>{const cd=CD(),k=K(),cx=ctx(),M=META();const tm=today().slice(0,7)
   if(isM)h+=`<select data-c="preM">${ms.map(m=>`<option value="${m}" ${'M:'+m===t?'selected':''}>${mLabel(m)}</option>`).join('')}</select>`;
   h+=`<button class="btn block" data-a="newAward">+ Atribuir pontos</button>`;
   for(const tu of cd.turmas){const pc=x=>Math.round((x.pct??-1)*1000);const rows=Object.values(tab).filter(x=>x.turma===tu.id).sort((a,b)=>b.tot-a.tot||pc(b)-pc(a)||nameOf(cx.athletes[a.id]).localeCompare(nameOf(cx.athletes[b.id])));if(!rows.length)continue;
-    const rk=[];rows.forEach((x,i)=>{const p=rows[i-1];rk[i]=p&&p.tot===x.tot&&pc(p)===pc(x)?rk[i-1]:i+1});
+    const rk=[];rows.forEach((x,i)=>{const p=rows[i-1];rk[i]=!p?1:p.tot===x.tot&&pc(p)===pc(x)?rk[i-1]:rk[i-1]+1});
     const w=winners(tab,tu.id);const e=ent[tu.id];
     const prize=w.length?(e?`<div class="srow entregue"><span>✅ ${esc(e.premio||'Prémio')} entregue a ${esc((e.ath||[]).map(N).join(', '))}</span><span class="muted sm">${fmtD(e.data)}</span><button class="x" data-a="prizeUndo" data-t="${t}" data-tu="${tu.id}">×</button></div>`
       :`<div class="srow"><span>${isM?'Destaque':'Prémio'}: <b>${esc(w.map(x=>N(x.id)).join(', '))}</b></span><button class="btn sm" data-a="prizeGive" data-t="${t}" data-tu="${tu.id}">Marcar entregue</button></div>`):'';
@@ -437,7 +444,7 @@ function renderAward(){const d=UI.draft,M=META(),k=K();const as=athsIn(k,d.turma
 /* ---------- TESTES ---------- */
 V.testes=()=>{const cx=ctx();const ss=Object.values(cx.tests).sort((a,b)=>a.data<b.data?1:-1);const M=META();
   return `<button class="btn block" data-a="newTest">+ Sessão de testes</button>`+(ss.length?`<div class="list" style="margin-top:12px">${ss.map(s=>{const n=Object.keys(s.res||{}).length;return `<div class="li" data-a="openTest" data-id="${s.id}"><div class="grow"><div class="nm">${fmtD(s.data)} · ${(s.turmas||[]).map(t=>turma(t).nome).join(' + ')}</div><div class="muted sm">${(s.testes||[]).map(id=>M.tests.find(t=>t.id===id)?.nome||id).join(', ')}</div></div><span class="tag t-mut">${n} atl.</span></div>`}).join('')}</div>`:empty('Sem sessões de testes.'))};
-function newTest(){const M=META();const id='t'+uid();const s={id,data:today(),turmas:CD().turmas.map(t=>t.id),testes:M.tests.map(t=>t.id),res:{}};put('tests',id,s);openTest(id)}
+function newTest(){const M=META();const id='t'+uid();const s={id,data:today(),turmas:CD().turmas.map(t=>t.id),testes:M.tests.map(t=>t.id),tent:Object.fromEntries(M.tests.map(t=>[t.id,+t.tent||1])),res:{}};put('tests',id,s);openTest(id)}
 function openTest(id){UI.tst={id,test:null};UI.sheetLive=renderTest;renderTest()}
 function renderTest(){const s=ctx().tests[UI.tst.id];if(!s){closeSheet();return}const M=META(),k=L.seasonOf(s.data);const tests=(s.testes||[]).map(id=>M.tests.find(t=>t.id===id)).filter(Boolean);
   if(!UI.tst.test||!tests.find(t=>t.id===UI.tst.test))UI.tst.test=tests[0]?.id;const T=tests.find(t=>t.id===UI.tst.test);
@@ -542,12 +549,12 @@ V.config=()=>{if(UI.draft?.kind!=='club'||UI.draft.cid!==UI.club)UI.draft={kind:
 
 /* ---------- DEFINIÇÕES GERAIS ---------- */
 V.geral=()=>{if(UI.draft?.kind!=='meta')UI.draft={kind:'meta',m:copy(META())};const m=UI.draft.m;const Y=Object.keys(m.quotas||{}).sort();
-  const lst=(key,fields,label)=>`${(m[key]||[]).map((r,i)=>`<div class="hrow">${fields.map(([f,l,t,w])=>t==='sel'?`<label class="mini" style="flex:0 0 ${w}">${l}<select data-c="mRow" data-key="${key}" data-i="${i}" data-f="${f}"><option value="max" ${r[f]==='max'?'selected':''}>maior</option><option value="min" ${r[f]==='min'?'selected':''}>menor</option></select></label>`:`<label class="mini" style="${w?'flex:0 0 '+w:''}">${l}<input ${t?`type="${t}"`:''} step="any" value="${esc(r[f]??'')}" data-c="mRow" data-key="${key}" data-i="${i}" data-f="${f}"></label>`).join('')}<button class="x" data-a="mRm" data-key="${key}" data-i="${i}">×</button></div>`).join('')}<button class="btn sm ghost" data-a="mAdd" data-key="${key}">+ ${label}</button>`;
+  const lst=(key,fields,label,drag)=>`${(m[key]||[]).map((r,i)=>`<div class="hrow" ${drag?`data-drow="${key}" data-idx="${i}"`:''}>${drag?'<span class="grip" aria-label="Arrastar">≡</span>':''}${fields.map(([f,l,t,w])=>t==='sel'?`<label class="mini" style="flex:0 0 ${w}">${l}<select data-c="mRow" data-key="${key}" data-i="${i}" data-f="${f}"><option value="max" ${r[f]==='max'?'selected':''}>maior</option><option value="min" ${r[f]==='min'?'selected':''}>menor</option></select></label>`:`<label class="mini" style="${w?'flex:0 0 '+w:''}">${l}<input ${t?`type="${t}"`:''} step="any" value="${esc(r[f]??'')}" data-c="mRow" data-key="${key}" data-i="${i}" data-f="${f}"></label>`).join('')}<button class="x" data-a="mRm" data-key="${key}" data-i="${i}">×</button></div>`).join('')}<button class="btn sm ghost" data-a="mAdd" data-key="${key}">+ ${label}</button>`;
   let h=back('Definições gerais')+`<div class="card"><h3>Quotas por ano civil</h3><p class="muted sm">Infantil = até aos 9 anos. Reduzido = quem entra entre setembro e dezembro (só federação e associação).</p>
    ${Y.map(y=>`<div class="blk"><b>${y}</b>${L.QITEMS.map(([it,l])=>`<div class="hrow"><span style="flex:0 0 78px" class="sm">${l}</span>${(it==='seg'?[['inf','Infantil'],['norm','Normal']]:[['inf','Infantil'],['norm','Normal'],['redInf','Red. inf.'],['redNorm','Red. norm.']]).map(([f,fl])=>`<label class="mini">${fl}<input type="number" step="0.01" value="${m.quotas[y][it]?.[f]??0}" data-c="mQ" data-y="${y}" data-it="${it}" data-f="${f}"></label>`).join('')}</div>`).join('')}</div>`).join('')}
    <button class="btn sm ghost" data-a="mQAdd">+ Ano ${Y.length?+Y[Y.length-1]+1:today().slice(0,4)}</button></div>
-   <div class="card"><h3>Tipos de prémio</h3>${lst('awardTypes',[['nome','Nome'],['pts','Pontos','number','70px']],'tipo')}<h3 style="margin-top:12px">Pontos de assiduidade</h3><label>Pontos para 100% de assiduidade, por mês ou trimestre (proporcional)</label><input type="number" step="1" value="${m.assidMax??10}" data-c="mTop" data-k="assidMax"></div>
-   <div class="card"><h3>Bateria de testes</h3>${lst('tests',[['nome','Nome'],['un','Unid.','','55px'],['melhor','Melhor','sel','80px'],['tent','Tent.','number','50px'],['dec','Dec.','number','50px']],'teste')}</div>
+   <div class="card"><h3>Tipos de prémio</h3>${lst('awardTypes',[['nome','Nome'],['pts','Pontos','number','70px']],'tipo')}<h3 style="margin-top:12px">Pontos de assiduidade</h3><label>Valor de 100% de assiduidade (ex.: 93% = 9,3 pts)</label><input type="number" step="1" value="${m.assidMax??10}" data-c="mTop" data-k="assidMax"><p class="muted sm">O mês e cada trimestre valem até este valor; a época soma os três trimestres.</p></div>
+   <div class="card"><h3>Bateria de testes</h3>${lst('tests',[['nome','Nome'],['un','Unid.','','55px'],['melhor','Melhor','sel','80px'],['tent','Tent.','number','50px'],['dec','Dec.','number','50px']],'teste',1)}</div>
    <div class="card"><h3>Graduações</h3><textarea data-c="mGraus">${esc((m.graus||[]).join('\n'))}</textarea></div>
    <div class="card"><h3>Mensagens</h3><p class="muted sm">Variáveis: {nome} {clube} {detalhe} {mens}</p>${[['pag','Confirmação de mensalidade'],['lemb','Lembrete de mensalidade'],['quota','Confirmação de quotas e taxas'],['parab','Parabéns']].map(([k,l])=>`<label>${l}</label><textarea data-c="mMsg" data-k="${k}">${esc(m.msgs?.[k]||'')}</textarea>`).join('')}</div>
    <button class="btn block" data-a="saveMeta">Guardar definições</button>`;return h};
@@ -565,6 +572,7 @@ const shH=t=>`<div class="sh-h"><h2 style="margin:0">${t}</h2><button class="x" 
 
 /* ---------- VOLTAR ---------- */
 function goBack(){if(!$('#sheet').classList.contains('hidden')){closeSheet();return true}
+  if(UI.club&&UI.tab==='mes'){UI.tab='aulas';UI.draft=null;render();window.scrollTo(0,0);return true}
   if(UI.club&&MAIS_SUB.includes(UI.tab)){UI.tab='mais';UI.draft=null;render();window.scrollTo(0,0);return true}
   if(UI.club){UI.club=null;UI.draft=null;render();window.scrollTo(0,0);return true}return false}
 try{history.pushState({ws:1},'')}catch(e){}
@@ -603,6 +611,9 @@ const A={
   goPremios:d=>{UI.tab='premios';UI.pre.t=d.t;closeSheet()},
   pickClub:d=>{UI.club=d.id;pref('club',d.id);UI.tab='aulas';UI.aul={m:null,t:'',scroll:true};UI.con.m=null;UI.draft=null;_ctx=null;render();window.scrollTo(0,0)},
   toPicker:()=>goBack(),
+  goMes:()=>{UI.tab='mes';UI.aul.m=null;UI.aul.scroll=true;closeSheet()},
+  addMenu:()=>{UI.sheetLive=null;renderAdd()},
+  addPick:d=>{if(d.v==='repo')repoDraft(null,false);else if(d.v==='extra')repoDraft(null,true);else{evDraft(null);if(UI.tab==='mes'&&UI.aul.m&&today().slice(0,7)!==UI.aul.m){UI.draft.ev.data=UI.aul.m+'-01';renderEv()}}},
   showAlerts:()=>{UI.sheetLive=renderAlerts;renderAlerts()},
   alterSess:(d,el,e)=>{e.stopPropagation();alterDraft(d.id)},
   openAlterOf:d=>alterDraft(d.id),
@@ -626,7 +637,7 @@ const A={
     if(a.lemb)put('athletes',a.id,{...copy(a),lemb:''});toast('Pagamentos registados')},
   remindA:d=>{UI.con.m=today().slice(0,7);A.remind(d);if(UI.draft?.kind==='ath'&&UI.draft.a.id===d.id)UI.draft.a.lemb=today()},
   evCycleA:d=>{const ev=copy(ctx().events[d.ev]);const x=ev.atl[d.id];x.estado=x.estado==='falta'?'cobrado':x.estado==='cobrado'?'entregue':'falta';if(x.estado==='cobrado'){x.v=+ev.valor||0;x.d=today()}put('events',ev.id,ev)},
-  feeMsgA:d=>{const fs=Object.values(ctx().fees).filter(f=>f.ath===d.id&&f.estado==='cobrado');if(!fs.length){toast('Toca primeiro em cada quota para a marcar como cobrada');return}const y=fs.map(f=>f.ano).sort().pop();A.feeMsg({id:d.id,y})},
+  feeMsgA:d=>A.feeMsg({id:d.id,y:d.y}),
   simOpen:()=>simDraft(),simReset:()=>{const b=UI.draft.base;UI.draft={...copy(b),base:b};renderSim()},
   prizeGive:d=>{const cd=CD(),k=K();const tab=L.pointsTable(cd,ctx(),META(),k,d.t);const w=winners(tab,d.tu);if(!w.length)return;const isM=d.t.startsWith('M:');
     const pr=prompt(`Prémio entregue a ${w.map(x=>N(x.id)).join(', ')}:`,isM?'Destaque do mês':'Patch');if(pr==null)return;const c=copy(cd);c.entregas=c.entregas||{};const key=periodKey(k,d.t);c.entregas[key]={...(c.entregas[key]||{}),[d.tu]:{ath:w.map(x=>x.id),premio:pr.trim()||'Prémio',data:today()}};saveClub(c);toast('Entrega registada')},
@@ -652,7 +663,8 @@ const A={
       put('sessions',id,{id,data:d.data,turma:t,ini:d.ini,fim:d.fim,tipo:rep?'reposicao':'extra',estado:'prevista',repoe:rep?[rep]:[],pres:{},plano:'',nota:''});first=first||id}
     toast(sel.length>1?`${sel.length} aulas criadas`:'Aula criada');UI.draft=null;openSess(first)},
   aulT:d=>{UI.aul.t=d.t;render()},
-  athF:d=>{UI.ath.f=d.f;render()},
+  athF:d=>{UI.ath.f=d.f;if(d.f!=='deve')UI.ath.dt='';render()},
+  athDT:d=>{UI.ath.dt=d.v;render()},
   newAth:()=>athDraft(null),
   editAth:(d,el,e)=>{if(e.target.closest('[data-a="quickEnr"]'))return;athDraft(d.id)},
   quickEnr:(d,el,e)=>{e.stopPropagation();const k=K();const a=copy(ctx().athletes[d.id]);const prev=Object.keys(a.insc||{}).filter(s=>s<k).sort().map(s=>a.insc[s]).pop();a.insc=a.insc||{};a.insc[k]=newEnr(prev,k);put('athletes',a.id,a);toast(nameOf(a)+' inscrito em '+seasonLabel(k))},
@@ -699,15 +711,16 @@ const A={
   qv:d=>{UI.con.qv=d.v;render()},
   genQuotas:d=>quotaGen(d.y),
   feeCycle:d=>{const f=copy(ctx().fees[d.id]);const a=ctx().athletes[f.ath];if(f.estado==='falta'){f.estado='cobrado';f.v=L.quotaValue(META(),f.ano,f.item,f.red,a?.nasc,today());f.dCob=today()}else if(f.estado==='cobrado'){f.estado='entregue';f.dEnt=today()}else{f.estado='falta';delete f.v;delete f.dCob;delete f.dEnt}put('fees',f.id,f)},
-  feeMsg:d=>{const fs=Object.values(ctx().fees).filter(f=>f.ath===d.id&&f.ano===d.y&&f.estado==='cobrado');const last=fs.map(f=>f.dCob).sort().pop();const items=fs.filter(f=>f.dCob===last).map(f=>({label:`${f.item==='seg'?'seguro':'quota da '+L.QITEMS.find(q=>q[0]===f.item)[1]} ${f.ano}`,v:f.v}));
-    sendMsg(ctx().athletes[d.id],L.fill(META().msgs?.quota,{nome:N(d.id),clube:CD().nome,detalhe:L.feeDetail(items)}));fs.filter(f=>f.dCob===last).forEach(f=>put('fees',f.id,{...copy(f),msg:today()}))},
+  feeMsg:d=>{const fs=Object.values(ctx().fees).filter(f=>f.ath===d.id&&f.ano===d.y&&f.estado!=='falta').sort((p,q)=>L.QITEMS.findIndex(z=>z[0]===p.item)-L.QITEMS.findIndex(z=>z[0]===q.item));
+    if(!fs.length){toast(`Ainda nenhuma quota de ${d.y} está paga. Toca primeiro em cada uma para a marcar.`);return}const items=fs.map(f=>({label:`${f.item==='seg'?'seguro':'quota da '+L.QITEMS.find(q=>q[0]===f.item)[1]} ${f.ano}`,v:f.v}));
+    sendMsg(ctx().athletes[d.id],L.fill(META().msgs?.quota,{nome:N(d.id),clube:CD().nome,detalhe:L.feeDetail(items)}));fs.forEach(f=>put('fees',f.id,{...copy(f),msg:today()}))},
   deliverAll:d=>{const fs=Object.values(ctx().fees).filter(f=>f.ano===d.y&&f.estado==='cobrado');if(!fs.length){toast('Nada cobrado por entregar');return}if(!confirm(`Marcar ${fs.length} quotas cobradas como entregues?`))return;fs.forEach(f=>put('fees',f.id,{...f,estado:'entregue',dEnt:today()}))},
   newEv:()=>evDraft(null),editEv:d=>evDraft(d.id),
   newEvA:()=>{evDraft(null);const m=UI.aul.m;if(m&&today().slice(0,7)!==m){UI.draft.ev.data=m+'-01';renderEv()}},
   evAlso:d=>{UI.draft.also=UI.draft.also||{};UI.draft.also[d.id]=!UI.draft.also[d.id];renderEv()},
   planMes:()=>planDraft(),
   doPlan:()=>{const d=UI.draft;const M=copy(META());M.frases=M.frases||{};M.frases[d.m]={texto:d.texto.trim(),autor:d.autor.trim()};api().putMeta(M);printMonth(d.m,M.frases[d.m])},
-  evAth:d=>{const ev=UI.draft.ev;if(ev.atl[d.id])delete ev.atl[d.id];else ev.atl[d.id]={estado:'falta'};renderEv()},
+  evAth:d=>{UI.draft.partOpen=true;const ev=UI.draft.ev;if(ev.atl[d.id])delete ev.atl[d.id];else ev.atl[d.id]={estado:'falta'};renderEv()},
   evCycle:d=>{const x=UI.draft.ev.atl[d.id];x.estado=x.estado==='falta'?'cobrado':x.estado==='cobrado'?'entregue':'falta';if(x.estado==='cobrado'){x.v=+UI.draft.ev.valor||0;x.d=today()}renderEv()},
   saveEv:()=>{const ev=UI.draft.ev;if(!ev.nome.trim()){toast('Falta o nome');return}ev.valor=+ev.valor||0;ev.pontos=+ev.pontos||0;if(!ev.id)ev.id='e'+uid();put('events',ev.id,ev);
     if(ev.assoc)for(const c of Object.values(DB.clubs)){if(!c.doc||c.doc.id===UI.club)continue;const ex=c.events?.[ev.id];api().put(c.doc.id,'events',ev.id,{...copy(ev),atl:ex?.atl||{}})}
@@ -796,6 +809,15 @@ async function importBackup(o){
   for(const m in (src.pay||{}))ops.push({cid,col:'payments',id:m,data:{...(ctx().payments[m]||{}),...src.pay[m]}});
   await api().bulk(ops);toast(`Importado: ${Object.keys(src.athletes).length} atletas`)}
 
+// arrastar para reordenar (bateria de testes)
+let DRG=null;
+document.addEventListener('pointerdown',e=>{const g=e.target.closest('.grip');if(!g)return;const row=g.closest('[data-drow]');e.preventDefault();
+  DRG={row,key:row.dataset.drow,from:+row.dataset.idx,rows:[...row.parentNode.querySelectorAll(`[data-drow="${row.dataset.drow}"]`)],y0:e.clientY,to:+row.dataset.idx};row.classList.add('drag');document.body.classList.add('nosel');g.setPointerCapture?.(e.pointerId)});
+document.addEventListener('pointermove',e=>{if(!DRG)return;const dy=e.clientY-DRG.y0;DRG.row.style.transform=`translateY(${dy}px)`;
+  let to=DRG.from;DRG.rows.forEach((r,i)=>{if(r===DRG.row)return;const b=r.getBoundingClientRect(),mid=b.top+b.height/2;if(i>DRG.from&&e.clientY>mid)to=Math.max(to,i);if(i<DRG.from&&e.clientY<mid)to=Math.min(to,i)});DRG.to=to;
+  DRG.rows.forEach((r,i)=>r.classList.toggle('dropmark',i===to&&to!==DRG.from))});
+const dragEnd=()=>{if(!DRG)return;const{key,from,to,row}=DRG;DRG=null;row.style.transform='';document.body.classList.remove('nosel');if(from!==to&&UI.draft?.m?.[key]){const arr=UI.draft.m[key];const[x]=arr.splice(from,1);arr.splice(to,0,x)}render()};
+document.addEventListener('pointerup',dragEnd);document.addEventListener('pointercancel',dragEnd);
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;const f=A[b.dataset.a];if(f){f(b.dataset,b,e)}});
 document.addEventListener('input',e=>{const t=e.target,f=t.dataset&&I[t.dataset.i];if(f)f(t)});
 document.addEventListener('change',e=>{const t=e.target,f=t.dataset&&C[t.dataset.c];if(f)f(t)});

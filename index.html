@@ -142,6 +142,16 @@ ol{padding-left:18px}
   #print *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   #print td b{font-size:12px}#print .pv{color:#666}#print .up{color:#15803d;font-weight:700}#print .down{color:#b91c1c;font-weight:700}
 }
+.btn.lembrar{display:inline-flex;align-items:center;gap:6px;font-weight:700}.btn.lembrar .ms{width:16px;height:16px}
+.paybtn{border:0;border-radius:12px;padding:8px 12px;font-size:13px;font-weight:700;line-height:1.2;text-align:center;white-space:nowrap}
+.chips.sub{margin-top:-4px}.chips.sub .chip{font-size:12px;padding:5px 10px}
+.li.saiu{opacity:.45}
+.grip{cursor:grab;touch-action:none;user-select:none;font-size:20px;padding:0 6px;align-self:center;color:var(--muted)}
+.hrow.drag{position:relative;z-index:5;background:var(--card,#fff);box-shadow:0 4px 14px rgba(0,0,0,.18);border-radius:8px}
+.hrow[data-drow]{flex-wrap:wrap;row-gap:4px}.hrow[data-drow] label.mini:first-of-type{flex:1 1 calc(100% - 40px)!important}.hrow[data-drow] label.mini:not(:first-of-type){flex:1 1 0!important;min-width:50px}
+.hrow[data-drow] label.mini:has(select){min-width:78px}
+body.nosel{user-select:none;-webkit-user-select:none}
+.hrow.dropmark{box-shadow:inset 0 2px 0 currentColor}
 </style>
 </head>
 <body>
@@ -152,6 +162,6 @@ ol{padding-left:18px}
 <div id="toast"></div>
 <div id="print"></div>
 <input type="file" id="importFile" accept=".json,application/json" data-c="importFile" hidden>
-<script type="module" src="app.js?v=18"></script>
+<script type="module" src="app.js?v=19"></script>
 </body>
 </html>
