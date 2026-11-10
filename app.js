@@ -1,6 +1,6 @@
-import * as L from './logic.js?v=14';
-import {DB,init,api} from './store.js?v=14';
-import {seedClubs,seedMeta} from './seed.js?v=14';
+import * as L from './logic.js?v=15';
+import {DB,init,api} from './store.js?v=15';
+import {seedClubs,seedMeta} from './seed.js?v=15';
 
 const FIREBASE={apiKey:"AIzaSyC6LSMa62K2QOfQNqyJaK4n9uU8_ZbcvUA",authDomain:"wadosensei.firebaseapp.com",projectId:"wadosensei",storageBucket:"wadosensei.firebasestorage.app",messagingSenderId:"613268049409",appId:"1:613268049409:web:cbb2bd7de5f88e1bbcba00"};
 const DEMO=new URLSearchParams(location.search).has('demo');
@@ -214,7 +214,7 @@ function athList(){const u=UI.ath,k=K(),cd=CD(),q=u.q.trim().toLowerCase(),m=cur
   const row=a=>{const e=L.enr(a,k);const x=st[a.id];const ag=a.nasc?L.ageAt(a.nasc,today()):null;
     const sub=e?[`${L.freqAt(e,m)}×/sem`,ag!=null?ag+' anos':'',x?.pct!=null?'assid. '+Math.round(x.pct*100)+'%':'',e.ate?'saiu '+mShort(e.ate):''].filter(Boolean).join(' · '):[ag!=null?ag+' anos':'',a.fnkp?'FNKP '+a.fnkp:''].filter(Boolean).join(' · ');
     let tag='';if(e){const dd=D(a);tag=`<button class="tag ${dd.total?'t-bad':'t-ok'}" style="padding:7px 10px" data-a="openPay" data-id="${a.id}">${dd.total?'Pagamentos em falta':'Pagamentos em dia'}</button>`}else tag=`<button class="btn sm" data-a="quickEnr" data-id="${a.id}">Inscrever</button>`;
-    return `<div class="li" data-a="editAth" data-id="${a.id}"><div class="grow"><div class="nm">${esc(nameOf(a))}${a.grau?` <span class="grau">${esc(a.grau)}</span>`:''}${!a.fnkp?' <span class="tag t-warn" style="font-size:10px">FNKP?</span>':''}</div><div class="muted sm">${esc(sub)}</div></div>${tag}</div>`};
+    return `<div class="li" data-a="editAth" data-id="${a.id}"><div class="grow"><div class="nm">${esc(nameOf(a))}${!a.fnkp?' <span class="tag t-warn" style="font-size:10px">FNKP?</span>':''}</div>${a.grau?`<div class="grauL">${esc(a.grau)}</div>`:''}<div class="muted sm">${esc(sub)}</div></div>${tag}</div>`};
   if(u.f==='ins'||u.f==='deve')return cd.turmas.map(t=>{const g=as.filter(a=>L.enr(a,k).turma===t.id);return g.length?`<div class="list"><div class="gh">${esc(t.nome)} · ${g.length}</div>${g.map(row).join('')}</div>`:''}).join('');
   return `<div class="list">${as.map(row).join('')}</div>`}
 const ST={pago:['Pago','t-ok'],isento:['Isento','t-mut'],isentoFixo:['Isento fixo','t-mut'],semPres:['Sem presenças','t-mut'],falta:['Em falta','t-bad']};
