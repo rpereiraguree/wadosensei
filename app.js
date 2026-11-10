@@ -46,9 +46,8 @@ addEventListener('online',()=>render());addEventListener('offline',()=>render())
 const TABS=[['aulas','Aulas','<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'],
   ['atletas','Atletas','<circle cx="9" cy="8" r="4"/><path d="M2 21v-1a6 6 0 0 1 12 0v1M16 3.5a4 4 0 0 1 0 8M22 21v-1a6 6 0 0 0-4-5.6"/>'],
   ['testes','Testes','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/>'],
-  ['contas','Contas','<path d="M18 7a6.5 6.5 0 1 0 0 10"/><path d="M4 10h9M4 14h9"/>'],
   ['mais','Mais','<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>']];
-const MAIS_SUB=['premios','config','geral','dados'];
+const MAIS_SUB=['premios','lotacao','contas','config','geral','dados'];
 function render(){
   const hdr=$('#hdr'),nav=$('#tabs'),view=$('#view');
   if(!DB.authReady){hdr.innerHTML='<h1>Wado Sensei</h1>';nav.innerHTML='';view.innerHTML='<div class="empty">A carregar…</div>';return}
@@ -280,9 +279,10 @@ function renderImp(){const d=UI.draft,rows=L.parseAthleteList(d.text);
   <div id="impPrev" class="muted sm">${rows.length} atleta(s) reconhecido(s)</div></div><button class="btn block" data-a="doImport">Importar</button>`)}
 
 /* ---------- CONTAS ---------- */
-V.contas=()=>{const cd=CD();const opts=cd.modelo==='gestao'?[['mens','Mês'],['epoca','Época'],['poup',cd.cfg?.poupNome||'Poupança'],['quotas','Quotas e taxas'],['todos','Todos os clubes']]:[['rem','Remuneração'],['lot','Lotação'],['quotas','Quotas e taxas'],['todos','Todos os clubes']];
+V.contas=()=>{const cd=CD();const opts=cd.modelo==='gestao'?[['mens','Mês'],['epoca','Época'],['poup',cd.cfg?.poupNome||'Poupança'],['quotas','Quotas e taxas'],['todos','Todos os clubes']]:[['rem','Remuneração'],['quotas','Quotas e taxas'],['todos','Todos os clubes']];
   if(!opts.find(o=>o[0]===UI.con.v))UI.con.v=opts[0][0];
-  return `<div class="chips">${opts.map(([v,l])=>`<button class="chip ${UI.con.v===v?'on':''}" data-a="conV" data-v="${v}">${esc(l)}</button>`).join('')}</div>`+CV[UI.con.v]()};
+  return back('Contas')+`<div class="chips">${opts.map(([v,l])=>`<button class="chip ${UI.con.v===v?'on':''}" data-a="conV" data-v="${v}">${esc(l)}</button>`).join('')}</div>`+CV[UI.con.v]()};
+V.lotacao=()=>back('Lotação')+(lotCard()||`<div class="card"><p class="muted sm">Este clube ainda não tem horário definido.</p></div>`);
 const CV={};
 function ctxOf(cid){const c=DB.clubs[cid];return{athletes:c.athletes,sessions:c.sessions,payments:c.payments,receitas:c.receitas,fees:c.fees,events:c.events,ledger:c.ledger,awards:c.awards,tests:c.tests,mp:L.monthPres(c.sessions)}}
 function slotStats(){const cd=CD(),k=K(),m=curMonth(k);const h=L.hist(cd.horarios,today())||cd.horarios?.[cd.horarios.length-1];
@@ -295,7 +295,7 @@ function capacity(){const cd=CD(),k=K(),m=curMonth(k),cx=ctx();const sl=slotStat
   return{sl,cap:Math.round(cap),ok,now,avg:L.round2(avg)}}
 function lotCard(){const cd=CD();const c=capacity();if(!c.sl.length)return '';
   const pct=+L.hist(cd.cfg?.pctEspaco,today().slice(0,7))?.v||0;const ges=cd.modelo==='gestao';const recNow=c.now*c.avg,recCap=c.cap*c.avg;
-  return `<div class="card"><div class="ch"><h3>Lotação por treino</h3><button class="btn sm ghost" data-a="simOpen">Simulador</button></div>
+  return `<div class="card"><div class="ch"><h3>Alunos e vagas por treino</h3><button class="btn sm ghost" data-a="simOpen">Simulador</button></div>
     <table class="tbl"><thead><tr><th>Treino</th><th>Alunos</th><th>Lotação</th><th>Vagas</th></tr></thead><tbody>${c.sl.map(x=>`<tr><td>${DOW[+x.s.wd]} · ${esc(turma(x.s.t).nome)}</td><td>${x.n}</td><td>${x.lot||'—'}</td><td style="font-weight:700;color:${x.vagas==null?'inherit':x.vagas<=0?'var(--bad)':'var(--ok)'}">${x.vagas==null?'—':x.vagas}</td></tr>`).join('')}</tbody></table>
     ${c.ok?`<p class="sm" style="margin-top:10px">Com a sala cheia cabem cerca de <b>${c.cap} alunos</b> (hoje: ${c.now}). Mensalidade média real: ${eur(c.avg)}.</p>
     <table class="tbl"><thead><tr><th></th><th>Hoje</th><th>Sala cheia</th></tr></thead><tbody><tr><td>Receita/mês</td><td>${eur(recNow)}</td><td>${eur(recCap)}</td></tr>
@@ -307,7 +307,7 @@ CV.mens=()=>{const cd=CD(),k=K(),cx=ctx(),ep=cd.epocas[k];if(!UI.con.m||!ep.mese
   return `<select data-c="conM">${ep.meses.map(x=>`<option value="${x}" ${x===m?'selected':''}>${mLabel(x)}</option>`).join('')}</select>
   <div class="kpis" style="margin-top:10px"><div class="kpi"><small>Recebido</small><b>${eur(f.rec)}</b></div><div class="kpi" data-a="goDeve" style="cursor:pointer"><small>Em falta até ${mShort(m)}</small><b style="color:${f.due?'var(--bad)':'inherit'}">${eur(f.due)}</b><small>${ids.length} atleta(s) · ver ›</small></div>
   <div class="kpi"><small>Pagar ${en} (${f.pct}%)</small><b>${eur(f.ent)}</b><small>c/ em falta ${eur(f.ent+f.dueEnt)}</small></div><div class="kpi"><small>Treinador</small><b>${eur(f.tr)}</b><small>c/ em falta ${eur(f.tr+f.dueTr)}</small></div></div>
-  <p class="muted sm">Os pagamentos registam-se em Atletas → Pagamentos de cada atleta.</p>`+lotCard()};
+  <p class="muted sm">Os pagamentos registam-se em Atletas → Pagamentos de cada atleta.</p>`};
 CV.epoca=()=>{const cd=CD(),k=K(),cx=ctx(),ep=cd.epocas[k];const now=today().slice(0,7);const ms=(ep.meses||[]).filter(m=>m<=now);let T={rec:0,ent:0,tr:0,poup:0};
   const rows=ms.map(m=>{const f=L.finGestao(cd,cx,k,m);T.rec+=f.rec;T.ent+=f.ent;T.tr+=f.tr;T.poup+=f.poup;return `<tr><td>${mShort(m)}</td><td>${eur(f.rec)}</td><td>${eur(f.ent)}</td><td>${eur(f.tr)}</td><td>${eur(f.poup)}</td></tr>`});
   return `<div class="card"><h3>Época ${seasonLabel(k)} até ${mShort(now).toLowerCase()}</h3><div class="tscroll"><table class="tbl"><thead><tr><th>Mês</th><th>Recebido</th><th>${esc(cd.cfg?.entNome||'Espaço')}</th><th>Treinador</th><th>Poupança</th></tr></thead><tbody>${rows.join('')}
@@ -392,7 +392,7 @@ function renderMov(){const{x,isNew}=UI.draft;const tipos=[['saida','Saída da po
 
 /* ---------- MAIS ---------- */
 V.mais=()=>{const k=K();const nk=String(Math.max(...Object.keys(CD().epocas).map(Number))+1);
-  const items=[['tab:premios','🏅','Prémios e pontos','Destaque do mês, prémio trimestral e classificação da época'],['newSeasonM','📅',`Nova época (${seasonLabel(nk)})`,'Cria a época seguinte e leva à reinscrição dos atletas'],
+  const items=[['tab:premios','🏅','Prémios e pontos','Destaque do mês, prémio trimestral e classificação da época'],['tab:lotacao','🪑','Lotação','Alunos e vagas por treino, receita com a sala cheia, simulador'],['tab:contas','💶','Contas','Mês, época, poupança, quotas e taxas, todos os clubes'],['newSeasonM','📅',`Nova época (${seasonLabel(nk)})`,'Cria a época seguinte e leva à reinscrição dos atletas'],
   ['tab:config','⚙️','Definições do clube','Turmas, horários e lotação, feriados, épocas, valores, aniversários'],['tab:geral','🧩','Definições gerais','Quotas por ano, pontos, testes, graus e mensagens'],['tab:dados','💾','Dados e backup','Exportar, importar, CSV']];
   return `<div class="list">${items.map(([a,i,l,s])=>{const[act,t]=a.split(':');return `<div class="li" data-a="${t?'tab':act}" ${t?`data-t="${t}"`:''}><span style="font-size:22px">${i}</span><div class="grow"><div class="nm">${l}</div><div class="muted sm">${s}</div></div><span class="muted">›</span></div>`}).join('')}</div>
   <p class="muted sm" style="text-align:center">${esc(DB.user.email)}${DB.mode==='demo'?' (demo)':''} · <a href="#" data-a="logout">Sair</a></p>`};
