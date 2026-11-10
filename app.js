@@ -1,6 +1,6 @@
-import * as L from './logic.js?v=15';
-import {DB,init,api} from './store.js?v=15';
-import {seedClubs,seedMeta} from './seed.js?v=15';
+import * as L from './logic.js?v=16';
+import {DB,init,api} from './store.js?v=16';
+import {seedClubs,seedMeta} from './seed.js?v=16';
 
 const FIREBASE={apiKey:"AIzaSyC6LSMa62K2QOfQNqyJaK4n9uU8_ZbcvUA",authDomain:"wadosensei.firebaseapp.com",projectId:"wadosensei",storageBucket:"wadosensei.firebasestorage.app",messagingSenderId:"613268049409",appId:"1:613268049409:web:cbb2bd7de5f88e1bbcba00"};
 const DEMO=new URLSearchParams(location.search).has('demo');
@@ -121,7 +121,7 @@ V.aulas=()=>{const cd=CD(),k=K(),t=today(),cx=ctx(),ep=cd.epocas[k]||{};
   const months=[];if(ep.inicio){let m=ep.inicio.slice(0,7);const end=(ep.fim||L.addDays(ep.inicio,330)).slice(0,7);while(m<=end){months.push(m);m=L.addMonths(m,1)}}
   if(!UI.aul.m||!months.includes(UI.aul.m))UI.aul.m=months.includes(t.slice(0,7))?t.slice(0,7):months[months.length-1];const m=UI.aul.m;
   const al=alertRows().length;
-  h+=`<div class="row gap"><select data-c="aulM" class="grow">${months.map(x=>`<option value="${x}" ${x===m?'selected':''}>${mLabel(x)}</option>`).join('')}</select><button class="btn" data-a="newRepo">+ Reposição</button><button class="btn ${al?'alert':'ghost'}" data-a="showAlerts">${al} Alerta${al===1?'':'s'}</button></div>
+  h+=`<div class="row gap"><select data-c="aulM" class="grow msel">${months.map(x=>`<option value="${x}" ${x===m?'selected':''}>${mShort(x)} ${x.slice(0,4)}</option>`).join('')}</select><button class="btn" data-a="newRepo">+ Reposição</button><button class="btn ${al?'alert':'ghost'}" data-a="showAlerts">${al} Alerta${al===1?'':'s'}</button></div>
    <div class="row gap" style="margin-top:8px"><button class="btn ghost grow" data-a="newEvA">+ Evento</button><button class="btn ghost grow" data-a="planMes">🖨 Plano do mês</button></div>
    <div class="chips"><button class="chip ${!UI.aul.t?'on':''}" data-a="aulT" data-t="">Todas</button>${cd.turmas.map(x=>`<button class="chip ${UI.aul.t===x.id?'on':''}" data-a="aulT" data-t="${x.id}">${esc(x.nome)}</button>`).join('')}</div>`;
   const last=L.addDays(L.addMonths(m,1)+'-01',-1);let ms=L.sessionsBetween(cd,CL().sessions,m+'-01',last);if(UI.aul.t)ms=ms.filter(s=>s.turma===UI.aul.t);
@@ -217,6 +217,7 @@ function athList(){const u=UI.ath,k=K(),cd=CD(),q=u.q.trim().toLowerCase(),m=cur
     return `<div class="li" data-a="editAth" data-id="${a.id}"><div class="grow"><div class="nm">${esc(nameOf(a))}${!a.fnkp?' <span class="tag t-warn" style="font-size:10px">FNKP?</span>':''}</div>${a.grau?`<div class="grauL">${esc(a.grau)}</div>`:''}<div class="muted sm">${esc(sub)}</div></div>${tag}</div>`};
   if(u.f==='ins'||u.f==='deve')return cd.turmas.map(t=>{const g=as.filter(a=>L.enr(a,k).turma===t.id);return g.length?`<div class="list"><div class="gh">${esc(t.nome)} · ${g.length}</div>${g.map(row).join('')}</div>`:''}).join('');
   return `<div class="list">${as.map(row).join('')}</div>`}
+const MAILI='<svg class="mi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
 const ST={pago:['Pago','t-ok'],isento:['Isento','t-mut'],isentoFixo:['Isento fixo','t-mut'],semPres:['Sem presenças','t-mut'],falta:['Em falta','t-bad']};
 const stTag=s=>`<span class="tag ${ST[s.st][1]}">${ST[s.st][0]}</span>`;
 function newEnr(prev,k){const cd=CD();const t=prev?.turma||cd.turmas[0].id;const h=L.hist(cd.horarios,today())||cd.horarios?.[cd.horarios.length-1];
@@ -257,13 +258,13 @@ function renderAth(){if(UI.draft?.kind!=='ath')return;const{a,isNew}=UI.draft,k=
       h+=`<div class="ch" style="margin-top:6px"><h3>Mensalidades ${seasonLabel(k)}</h3>${dd.items.some(x=>x.tipo==='mens')?'<button class="btn sm" data-a="payAll" data-id="'+a.id+'">Pagar todos em falta</button>':''}</div>
         <div class="list">${rows.map(({mm,s})=>{const sub=s.st==='pago'?`${eur(s.v)}${s.d?' · pago a '+fmtD(s.d):''}`:s.v!=null?eur(s.v)+(s.val?.desc?.length?' · '+s.val.desc.map(x=>x[0]).join(', ').toLowerCase():''):'';
           return `<div class="li"><div class="grow"><div class="nm">${mLabel(mm)}</div><div class="muted sm" ${s.st==='pago'?`data-a="payVal" data-id="${a.id}" data-m="${mm}"`:''}>${sub}</div></div><button class="tag ${ST[s.st][1]}" style="padding:7px 11px" data-a="payCycle" data-id="${a.id}" data-m="${mm}">${ST[s.st][0]}</button></div>`}).join('')}</div>
-        ${lastPaid?`<button class="btn block mail ${sent?'sent':''}" data-a="payMsg" data-id="${a.id}" data-m="${lastPaid.m}">${sent?'✉✓ Confirmação enviada · reenviar':'✉ Enviar confirmação do último pagamento'}</button>`:''}
+        ${lastPaid?`<button class="btn block mail ${sent?'sent':''}" data-a="payMsg" data-id="${a.id}" data-m="${lastPaid.m}">${MAILI}<span>${sent?'Confirmação enviada · reenviar':'Enviar confirmação do último pagamento'}</span></button>`:''}
         <p class="muted sm">Toca no estado de cada mês: Em falta → Pago → Isento. Toca no valor pago para o corrigir.</p>`}
     const fees=Object.values(cx.fees).filter(f=>f.ath===a.id).sort((x,y)=>x.ano<y.ano?1:-1);const evs=Object.values(cx.events).filter(ev=>ev.atl?.[a.id]).sort((x,y)=>x.data<y.data?1:-1);
     if(fees.length||evs.length){const anyC=fees.some(f=>f.estado==='cobrado');
       h+=`<h3 style="margin:14px 0 8px">Quotas, seguro e eventos</h3><div class="list">${fees.map(f=>`<div class="li"><div class="grow"><div class="nm">${L.QITEMS.find(q=>q[0]===f.item)[1]} ${f.ano}${f.red?' (red.)':''}</div><div class="muted sm">${eur(L.feeValue(M,f,A0,today()))}${f.dCob?' · cobrado a '+fmtD(f.dCob):''}</div></div><button class="tag ${f.estado==='entregue'?'t-ok':f.estado==='cobrado'?'t-blue':'t-bad'}" style="padding:7px 11px" data-a="feeCycle" data-id="${f.id}">${f.estado==='entregue'?'Entregue':f.estado==='cobrado'?'Cobrado':'Em falta'}</button></div>`).join('')}
         ${evs.map(ev=>{const x=ev.atl[a.id];return `<div class="li"><div class="grow"><div class="nm">${esc(ev.nome)}</div><div class="muted sm">${fmtD(ev.data)} · ${eur(x.v??ev.valor)}${x.grau?' · '+esc(x.grau):''}</div></div>${+ev.valor?`<button class="tag ${x.estado==='entregue'?'t-ok':x.estado==='cobrado'?'t-blue':'t-bad'}" style="padding:7px 11px" data-a="evCycleA" data-ev="${ev.id}" data-id="${a.id}">${x.estado==='entregue'?'Entregue':x.estado==='cobrado'?'Cobrado':'Em falta'}</button>`:'<span class="tag t-mut">Participa</span>'}</div>`}).join('')}</div>
-        ${anyC?`<button class="btn block mail" data-a="feeMsgA" data-id="${a.id}">✉ Enviar confirmação das quotas</button>`:''}`}}
+        ${anyC?`<button class="btn block mail" data-a="feeMsgA" data-id="${a.id}">${MAILI}<span>Enviar confirmação das quotas</span></button>`:''}`}}
   if(tab==='evo'&&!isNew&&cx.athletes[a.id]){const pts=L.pointsTable(cd,cx,M,k,'E')[a.id];const rows=Object.keys(cd.epocas).sort().reverse().map(sk=>{const r=L.seasonRange(sk);const x=L.attStats(cd,cx,r.from,r.to,+cd.cfg?.pesoJ||0.2)[a.id];return x?`<div class="srow"><span>${seasonLabel(sk)}</span><span class="muted sm">${x.P} P · ${x.J} J de ${L.fmtNum(x.exp,x.exp%1?1:0)} previstas</span><b>${Math.round(x.pct*100)}%</b></div>`:''}).join('');
     h+=`<div class="card"><h3>Assiduidade e pontos</h3>${rows||'<div class="muted sm">Sem registos.</div>'}${pts?`<div class="srow"><span>Pontos ${seasonLabel(k)}</span><span class="muted sm">assid. ${pts.assid} · prémios ${pts.prem} · eventos ${pts.ev}</span><b>${pts.tot}</b></div>`:''}</div>`;
     const charts=(M.tests||[]).map(t=>{const hs=L.testHistory(cx.tests,a.id,t.id).map(x=>({d:x.data,v:L.bestOf(t,x.r)})).filter(x=>x.v!=null);return hs.length?`<div class="tchart"><div class="sm"><b>${esc(t.nome)}</b> <span class="muted">${esc(t.un)}</span></div>${spark(hs,t)}</div>`:''}).join('');

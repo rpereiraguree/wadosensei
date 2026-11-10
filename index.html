@@ -54,7 +54,9 @@ h2{font-size:18px;margin:4px 0 12px}h3{font-size:15px;margin:0}
 .grauL{font-size:12.5px;font-weight:600;margin:1px 0}
 .grau{font-size:11px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px;margin-left:4px;white-space:nowrap}
 .btn.alert{background:var(--badbg);color:var(--bad)}
-.btn.mail{font-size:16px;padding:12px 14px}
+.btn.mail{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:15px;padding:14px;white-space:normal;text-align:center}
+.btn.mail .mi{width:40px;height:40px}
+.msel{min-width:0}
 .tbl{width:100%;border-collapse:collapse;font-size:13.5px}.tbl th,.tbl td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 .tbl th:first-child,.tbl td:first-child{text-align:left}.tbl th{font-size:12px;color:var(--muted);font-weight:600}.tbl tr.tot td{font-weight:700;border-top:2px solid var(--line)}
 .tscroll{overflow-x:auto}
@@ -149,6 +151,6 @@ ol{padding-left:18px}
 <div id="toast"></div>
 <div id="print"></div>
 <input type="file" id="importFile" accept=".json,application/json" data-c="importFile" hidden>
-<script type="module" src="app.js?v=15"></script>
+<script type="module" src="app.js?v=16"></script>
 </body>
 </html>
