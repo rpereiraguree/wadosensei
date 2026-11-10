@@ -1,6 +1,6 @@
-import * as L from './logic.js?v=16';
-import {DB,init,api} from './store.js?v=16';
-import {seedClubs,seedMeta} from './seed.js?v=16';
+import * as L from './logic.js?v=17';
+import {DB,init,api} from './store.js?v=17';
+import {seedClubs,seedMeta} from './seed.js?v=17';
 
 const FIREBASE={apiKey:"AIzaSyC6LSMa62K2QOfQNqyJaK4n9uU8_ZbcvUA",authDomain:"wadosensei.firebaseapp.com",projectId:"wadosensei",storageBucket:"wadosensei.firebasestorage.app",messagingSenderId:"613268049409",appId:"1:613268049409:web:cbb2bd7de5f88e1bbcba00"};
 const DEMO=new URLSearchParams(location.search).has('demo');
@@ -212,9 +212,9 @@ function athList(){const u=UI.ath,k=K(),cd=CD(),q=u.q.trim().toLowerCase(),m=cur
     .sort((a,b)=>graus.indexOf(b.grau)-graus.indexOf(a.grau)||nameOf(a).localeCompare(nameOf(b)));
   if(!as.length)return empty(u.f==='ins'?'Ainda ninguém inscrito nesta época. Abre "Não inscritos" para inscrever quem continua, ou adiciona novos.':u.f==='deve'?'Ninguém com pagamentos em falta.':'Sem resultados.');
   const row=a=>{const e=L.enr(a,k);const x=st[a.id];const ag=a.nasc?L.ageAt(a.nasc,today()):null;
-    const sub=e?[`${L.freqAt(e,m)}×/sem`,ag!=null?ag+' anos':'',x?.pct!=null?'assid. '+Math.round(x.pct*100)+'%':'',e.ate?'saiu '+mShort(e.ate):''].filter(Boolean).join(' · '):[ag!=null?ag+' anos':'',a.fnkp?'FNKP '+a.fnkp:''].filter(Boolean).join(' · ');
+    const sub=e?[`${L.freqAt(e,m)}×/sem`,ag!=null?ag+' anos':'',e.ate?'saiu '+mShort(e.ate):''].filter(Boolean).join(' · '):[ag!=null?ag+' anos':'',a.fnkp?'FNKP '+a.fnkp:''].filter(Boolean).join(' · ');const sub2=e&&x?.pct!=null?'assid. '+Math.round(x.pct*100)+'%':'';
     let tag='';if(e){const dd=D(a);tag=`<button class="tag ${dd.total?'t-bad':'t-ok'}" style="padding:7px 10px" data-a="openPay" data-id="${a.id}">${dd.total?'Pagamentos em falta':'Pagamentos em dia'}</button>`}else tag=`<button class="btn sm" data-a="quickEnr" data-id="${a.id}">Inscrever</button>`;
-    return `<div class="li" data-a="editAth" data-id="${a.id}"><div class="grow"><div class="nm">${esc(nameOf(a))}${!a.fnkp?' <span class="tag t-warn" style="font-size:10px">FNKP?</span>':''}</div>${a.grau?`<div class="grauL">${esc(a.grau)}</div>`:''}<div class="muted sm">${esc(sub)}</div></div>${tag}</div>`};
+    return `<div class="li" data-a="editAth" data-id="${a.id}"><div class="grow"><div class="nm">${esc(nameOf(a))}${!a.fnkp?' <span class="tag t-warn" style="font-size:10px">FNKP?</span>':''}</div>${a.grau?`<div class="grauL">${esc(a.grau)}</div>`:''}<div class="muted sm">${esc(sub)}</div>${sub2?`<div class="muted sm">${sub2}</div>`:''}</div>${tag}</div>`};
   if(u.f==='ins'||u.f==='deve')return cd.turmas.map(t=>{const g=as.filter(a=>L.enr(a,k).turma===t.id);return g.length?`<div class="list"><div class="gh">${esc(t.nome)} · ${g.length}</div>${g.map(row).join('')}</div>`:''}).join('');
   return `<div class="list">${as.map(row).join('')}</div>`}
 const MAILI='<svg class="mi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
@@ -258,13 +258,13 @@ function renderAth(){if(UI.draft?.kind!=='ath')return;const{a,isNew}=UI.draft,k=
       h+=`<div class="ch" style="margin-top:6px"><h3>Mensalidades ${seasonLabel(k)}</h3>${dd.items.some(x=>x.tipo==='mens')?'<button class="btn sm" data-a="payAll" data-id="'+a.id+'">Pagar todos em falta</button>':''}</div>
         <div class="list">${rows.map(({mm,s})=>{const sub=s.st==='pago'?`${eur(s.v)}${s.d?' · pago a '+fmtD(s.d):''}`:s.v!=null?eur(s.v)+(s.val?.desc?.length?' · '+s.val.desc.map(x=>x[0]).join(', ').toLowerCase():''):'';
           return `<div class="li"><div class="grow"><div class="nm">${mLabel(mm)}</div><div class="muted sm" ${s.st==='pago'?`data-a="payVal" data-id="${a.id}" data-m="${mm}"`:''}>${sub}</div></div><button class="tag ${ST[s.st][1]}" style="padding:7px 11px" data-a="payCycle" data-id="${a.id}" data-m="${mm}">${ST[s.st][0]}</button></div>`}).join('')}</div>
-        ${lastPaid?`<button class="btn block mail ${sent?'sent':''}" data-a="payMsg" data-id="${a.id}" data-m="${lastPaid.m}">${MAILI}<span>${sent?'Confirmação enviada · reenviar':'Enviar confirmação do último pagamento'}</span></button>`:''}
+        ${lastPaid?`<button class="btn block mail ${sent?'sent':''}" data-a="payMsg" data-id="${a.id}" data-m="${lastPaid.m}">${MAILI}<span>${sent?'Confirmação enviada · reenviar':'Enviar confirmação'}</span></button>`:''}
         <p class="muted sm">Toca no estado de cada mês: Em falta → Pago → Isento. Toca no valor pago para o corrigir.</p>`}
     const fees=Object.values(cx.fees).filter(f=>f.ath===a.id).sort((x,y)=>x.ano<y.ano?1:-1);const evs=Object.values(cx.events).filter(ev=>ev.atl?.[a.id]).sort((x,y)=>x.data<y.data?1:-1);
     if(fees.length||evs.length){const anyC=fees.some(f=>f.estado==='cobrado');
       h+=`<h3 style="margin:14px 0 8px">Quotas, seguro e eventos</h3><div class="list">${fees.map(f=>`<div class="li"><div class="grow"><div class="nm">${L.QITEMS.find(q=>q[0]===f.item)[1]} ${f.ano}${f.red?' (red.)':''}</div><div class="muted sm">${eur(L.feeValue(M,f,A0,today()))}${f.dCob?' · cobrado a '+fmtD(f.dCob):''}</div></div><button class="tag ${f.estado==='entregue'?'t-ok':f.estado==='cobrado'?'t-blue':'t-bad'}" style="padding:7px 11px" data-a="feeCycle" data-id="${f.id}">${f.estado==='entregue'?'Entregue':f.estado==='cobrado'?'Cobrado':'Em falta'}</button></div>`).join('')}
         ${evs.map(ev=>{const x=ev.atl[a.id];return `<div class="li"><div class="grow"><div class="nm">${esc(ev.nome)}</div><div class="muted sm">${fmtD(ev.data)} · ${eur(x.v??ev.valor)}${x.grau?' · '+esc(x.grau):''}</div></div>${+ev.valor?`<button class="tag ${x.estado==='entregue'?'t-ok':x.estado==='cobrado'?'t-blue':'t-bad'}" style="padding:7px 11px" data-a="evCycleA" data-ev="${ev.id}" data-id="${a.id}">${x.estado==='entregue'?'Entregue':x.estado==='cobrado'?'Cobrado':'Em falta'}</button>`:'<span class="tag t-mut">Participa</span>'}</div>`}).join('')}</div>
-        ${anyC?`<button class="btn block mail" data-a="feeMsgA" data-id="${a.id}">${MAILI}<span>Enviar confirmação das quotas</span></button>`:''}`}}
+        ${fees.length?`<button class="btn block mail ${fees.some(f=>f.estado==='cobrado'&&f.msg)?'sent':''}" data-a="feeMsgA" data-id="${a.id}">${MAILI}<span>${anyC?'Enviar confirmação das quotas e seguro':'Enviar confirmação das quotas e seguro (marca primeiro como cobradas)'}</span></button>`:''}`}}
   if(tab==='evo'&&!isNew&&cx.athletes[a.id]){const pts=L.pointsTable(cd,cx,M,k,'E')[a.id];const rows=Object.keys(cd.epocas).sort().reverse().map(sk=>{const r=L.seasonRange(sk);const x=L.attStats(cd,cx,r.from,r.to,+cd.cfg?.pesoJ||0.2)[a.id];return x?`<div class="srow"><span>${seasonLabel(sk)}</span><span class="muted sm">${x.P} P · ${x.J} J de ${L.fmtNum(x.exp,x.exp%1?1:0)} previstas</span><b>${Math.round(x.pct*100)}%</b></div>`:''}).join('');
     h+=`<div class="card"><h3>Assiduidade e pontos</h3>${rows||'<div class="muted sm">Sem registos.</div>'}${pts?`<div class="srow"><span>Pontos ${seasonLabel(k)}</span><span class="muted sm">assid. ${pts.assid} · prémios ${pts.prem} · eventos ${pts.ev}</span><b>${pts.tot}</b></div>`:''}</div>`;
     const charts=(M.tests||[]).map(t=>{const hs=L.testHistory(cx.tests,a.id,t.id).map(x=>({d:x.data,v:L.bestOf(t,x.r)})).filter(x=>x.v!=null);return hs.length?`<div class="tchart"><div class="sm"><b>${esc(t.nome)}</b> <span class="muted">${esc(t.un)}</span></div>${spark(hs,t)}</div>`:''}).join('');
@@ -562,6 +562,13 @@ function openSheet(h){$('#sheetBody').innerHTML=h;$('#sheet').classList.remove('
 function closeSheet(){$('#sheet').classList.add('hidden');document.body.classList.remove('noscroll');UI.sheetLive=null;if(UI.sw.run){UI.sw.run=false}if(UI.draft&&!['club','meta'].includes(UI.draft.kind))UI.draft=null;render()}
 const shH=t=>`<div class="sh-h"><h2 style="margin:0">${t}</h2><button class="x" data-a="close" aria-label="Fechar">×</button></div>`;
 
+/* ---------- VOLTAR ---------- */
+function goBack(){if(!$('#sheet').classList.contains('hidden')){closeSheet();return true}
+  if(UI.club&&MAIS_SUB.includes(UI.tab)){UI.tab='mais';UI.draft=null;render();window.scrollTo(0,0);return true}
+  if(UI.club){UI.club=null;UI.draft=null;render();window.scrollTo(0,0);return true}return false}
+try{history.pushState({ws:1},'')}catch(e){}
+addEventListener('popstate',()=>{if(goBack()){try{history.pushState({ws:1},'')}catch(e){}}});
+
 /* ---------- AÇÕES ---------- */
 function sibsOf(id,k){const a=ctx().athletes[id];if(!a?.irmaos)return[a];const g=a.irmaos.trim().toLowerCase();
   return Object.values(ctx().athletes).filter(o=>o.id===id||((o.irmaos||'').trim().toLowerCase()===g&&L.enr(o,k))).sort((x,y)=>x.id===id?-1:y.id===id?1:nameOf(x).localeCompare(nameOf(y)))}
@@ -594,7 +601,7 @@ const A={
   goDeve:()=>{UI.tab='atletas';UI.ath.f='deve';UI.ath.q='';closeSheet();window.scrollTo(0,0)},
   goPremios:d=>{UI.tab='premios';UI.pre.t=d.t;closeSheet()},
   pickClub:d=>{UI.club=d.id;pref('club',d.id);UI.tab='aulas';UI.aul={m:null,t:'',scroll:true};UI.con.m=null;UI.draft=null;_ctx=null;render();window.scrollTo(0,0)},
-  toPicker:()=>{UI.club=null;UI.draft=null;closeSheet();window.scrollTo(0,0)},
+  toPicker:()=>goBack(),
   showAlerts:()=>{UI.sheetLive=renderAlerts;renderAlerts()},
   alterSess:(d,el,e)=>{e.stopPropagation();alterDraft(d.id)},
   openAlterOf:d=>alterDraft(d.id),
@@ -618,7 +625,7 @@ const A={
     if(a.lemb)put('athletes',a.id,{...copy(a),lemb:''});toast('Pagamentos registados')},
   remindA:d=>{UI.con.m=today().slice(0,7);A.remind(d);if(UI.draft?.kind==='ath'&&UI.draft.a.id===d.id)UI.draft.a.lemb=today()},
   evCycleA:d=>{const ev=copy(ctx().events[d.ev]);const x=ev.atl[d.id];x.estado=x.estado==='falta'?'cobrado':x.estado==='cobrado'?'entregue':'falta';if(x.estado==='cobrado'){x.v=+ev.valor||0;x.d=today()}put('events',ev.id,ev)},
-  feeMsgA:d=>{const fs=Object.values(ctx().fees).filter(f=>f.ath===d.id&&f.estado==='cobrado');if(!fs.length)return;const y=fs.map(f=>f.ano).sort().pop();A.feeMsg({id:d.id,y})},
+  feeMsgA:d=>{const fs=Object.values(ctx().fees).filter(f=>f.ath===d.id&&f.estado==='cobrado');if(!fs.length){toast('Toca primeiro em cada quota para a marcar como cobrada');return}const y=fs.map(f=>f.ano).sort().pop();A.feeMsg({id:d.id,y})},
   simOpen:()=>simDraft(),simReset:()=>{const b=UI.draft.base;UI.draft={...copy(b),base:b};renderSim()},
   prizeGive:d=>{const cd=CD(),k=K();const tab=L.pointsTable(cd,ctx(),META(),k,d.t);const w=winners(tab,d.tu);if(!w.length)return;const isM=d.t.startsWith('M:');
     const pr=prompt(`Prémio entregue a ${w.map(x=>N(x.id)).join(', ')}:`,isM?'Destaque do mês':'Patch');if(pr==null)return;const c=copy(cd);c.entregas=c.entregas||{};const key=periodKey(k,d.t);c.entregas[key]={...(c.entregas[key]||{}),[d.tu]:{ath:w.map(x=>x.id),premio:pr.trim()||'Prémio',data:today()}};saveClub(c);toast('Entrega registada')},
@@ -678,7 +685,7 @@ const A={
   payVal:d=>{const pm=copy(ctx().payments[d.m]||{});const p=pm[d.id];if(!p||p.s!=='P')return;const v=prompt('Valor pago (€)',p.v);if(v==null)return;const n=parseFloat(String(v).replace(',','.'));if(isNaN(n))return;p.v=n;put('payments',d.m,pm)},
   payMsg:d=>{const k=K(),cx=ctx();const p=cx.payments[d.m]?.[d.id];if(!p)return;
     const sibs=sibsOf(d.id,k).filter(s=>{const q=cx.payments[d.m]?.[s.id];return s.id===d.id||(q?.s==='P'&&(!p.d||q.d===p.d))});
-    const groups=sibs.map(a=>({a,items:payItems(a.id,d.m)}));sendMsg(cx.athletes[d.id],buildMsg(META().msgs?.pag,groups,cx.athletes[d.id]));
+    const groups=sibs.map(a=>({a,items:[{m:d.m,f:L.freqAt(L.enr(a,k),d.m),v:+cx.payments[d.m][a.id].v}]}));sendMsg(cx.athletes[d.id],buildMsg(META().msgs?.pag,groups,cx.athletes[d.id]));
     const byM={};groups.forEach(g=>g.items.forEach(x=>{(byM[x.m]=byM[x.m]||copy(cx.payments[x.m]||{}));if(byM[x.m][g.a.id])byM[x.m][g.a.id].msg=today()}));for(const m in byM)put('payments',m,byM[m])},
   remind:d=>{const k=K(),cx=ctx();const due=L.dueList(CD(),cx,k,UI.con.m);const groups=sibsOf(d.id,k).map(a=>({a,items:due.filter(x=>x.id===a.id).map(x=>({m:x.m,f:x.f,v:x.v}))})).filter(g=>g.items.length);
     if(!groups.length)return;sendMsg(cx.athletes[d.id],buildMsg(META().msgs?.lemb,groups,cx.athletes[d.id]));groups.forEach(g=>put('athletes',g.a.id,{...copy(g.a),lemb:today()}))},
