@@ -1,6 +1,6 @@
 // Service worker: app disponível sem rede e sempre atualizada quando há rede.
-const CACHE='wadosensei-v21';
-const SHELL=['./','index.html','app.js?v=21','logic.js?v=21','store.js?v=21','seed.js?v=21','manifest.webmanifest','icon-192.png','icon-512.png','icon-maskable.png','icon-96.png'];
+const CACHE='wadosensei-v22';
+const SHELL=['./','index.html','app.js?v=22','logic.js?v=22','store.js?v=22','seed.js?v=22','manifest.webmanifest','icon-192.png','icon-512.png','icon-maskable.png','icon-96.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(e.request.method!=='GET')return;

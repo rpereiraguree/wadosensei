@@ -406,7 +406,7 @@ function renderMov(){const{x,isNew}=UI.draft;const tipos=[['saida','Saída da po
 /* ---------- MAIS ---------- */
 V.mais=()=>{const k=K();const nk=String(Math.max(...Object.keys(CD().epocas).map(Number))+1);
   const items=[['tab:premios','🏅','Prémios e pontos','Destaque do mês, prémio trimestral e classificação da época'],['tab:lotacao','🪑','Lotação','Alunos e vagas por treino, receita com a sala cheia, simulador'],['tab:contas','💶','Contas','Mês, época, poupança, quotas e taxas, todos os clubes'],['newSeasonM','📅',`Nova época (${seasonLabel(nk)})`,'Cria a época seguinte e leva à reinscrição dos atletas'],
-  ['tab:config','⚙️','Definições do clube','Turmas, horários e lotação, feriados, épocas, valores, aniversários'],['tab:geral','🧩','Definições gerais','Quotas por ano, pontos, testes, graus e mensagens'],['tab:dados','💾','Dados e backup','Exportar, importar, CSV']];
+  ['tab:config','⚙️','Definições do clube','Turmas, horários e lotação, feriados, épocas, valores, aniversários'],['tab:geral','🧩','Definições gerais','Quotas por ano, pontos, graus e mensagens'],['tab:dados','💾','Dados e backup','Exportar, importar, CSV']];
   return `<div class="list">${items.map(([a,i,l,s])=>{const[act,t]=a.split(':');return `<div class="li" data-a="${t?'tab':act}" ${t?`data-t="${t}"`:''}><span style="font-size:22px">${i}</span><div class="grow"><div class="nm">${l}</div><div class="muted sm">${s}</div></div><span class="muted">›</span></div>`}).join('')}</div>
   <p class="muted sm" style="text-align:center">${esc(DB.user.email)}${DB.mode==='demo'?' (demo)':''} · <a href="#" data-a="logout">Sair</a></p>`};
 function periodKey(k,t){return t==='E'?`${k}-E`:t.startsWith('M:')?t.slice(2):`${k}-${t}`}
@@ -444,7 +444,11 @@ function renderAward(){const d=UI.draft,M=META(),k=K();const as=athsIn(k,d.turma
 /* ---------- TESTES ---------- */
 const tRange=s=>s.ate&&s.ate!==s.data?(s.data.slice(0,4)===s.ate.slice(0,4)?fmtD(s.data).slice(0,5):fmtD(s.data))+' a '+fmtD(s.ate):fmtD(s.data);
 V.testes=()=>{const cx=ctx();const ss=Object.values(cx.tests).sort((a,b)=>a.data<b.data?1:-1);const M=META();
-  return `<button class="btn block" data-a="newTest">+ Sessão de testes</button>`+(ss.length?`<div class="list" style="margin-top:12px">${ss.map(s=>{const n=Object.keys(s.res||{}).length;return `<div class="li" data-a="openTest" data-id="${s.id}"><div class="grow"><div class="nm">${tRange(s)} · ${(s.turmas||[]).map(t=>turma(t).nome).join(' + ')}</div><div class="muted sm">${(s.testes||[]).map(id=>M.tests.find(t=>t.id===id)?.nome||id).join(', ')}</div></div><span class="tag t-mut">${s.fechada?'🔒 ':''}${n} atl.</span></div>`}).join('')}</div>`:empty('Sem sessões de testes.'))};
+  return `<div style="display:flex;gap:8px"><button class="btn" style="flex:1" data-a="newTest">+ Sessão de testes</button><button class="btn ghost" data-a="testCfg" title="Bateria de testes" aria-label="Bateria de testes" style="flex:0 0 auto;font-size:18px;padding:0 14px">⚙</button></div>`+(ss.length?`<div class="list" style="margin-top:12px">${ss.map(s=>{const n=Object.keys(s.res||{}).length;return `<div class="li" data-a="openTest" data-id="${s.id}"><div class="grow"><div class="nm">${tRange(s)} · ${(s.turmas||[]).map(t=>turma(t).nome).join(' + ')}</div><div class="muted sm">${(s.testes||[]).map(id=>M.tests.find(t=>t.id===id)?.nome||id).join(', ')}</div></div><span class="tag t-mut">${s.fechada?'🔒 ':''}${n} atl.</span></div>`}).join('')}</div>`:empty('Sem sessões de testes.'))};
+function testCfg(){UI.draft={kind:'tcfg',m:copy(META())};UI.sheetLive=null;renderTCfg()}
+function renderTCfg(){if(UI.draft?.kind!=='tcfg')return;const m=UI.draft.m;
+  openSheet(shH('Bateria de testes')+`<p class="muted sm">Testes disponíveis nas sessões. Arrasta (≡) para mudar a ordem. Tent. = tentativas; Dec. = casas decimais.</p><div class="card">${metaList(m,'tests',TEST_FIELDS,'teste',1)}</div><button class="btn block" data-a="saveTCfg">Guardar bateria</button>`)}
+function rrMeta(){render();if(UI.draft?.kind==='tcfg')renderTCfg()}
 function newTest(){const M=META();const id='t'+uid();const s={id,data:today(),turmas:CD().turmas.map(t=>t.id),testes:M.tests.map(t=>t.id),tent:Object.fromEntries(M.tests.map(t=>[t.id,+t.tent||1])),res:{}};put('tests',id,s);openTest(id)}
 function openTest(id){UI.tst={id,test:null};UI.sheetLive=renderTest;renderTest()}
 function renderTest(){const s=ctx().tests[UI.tst.id];if(!s){closeSheet();return}const M=META(),k=L.seasonOf(s.data);const tests=(s.testes||[]).map(id=>M.tests.find(t=>t.id===id)).filter(Boolean);
@@ -549,13 +553,14 @@ V.config=()=>{if(UI.draft?.kind!=='club'||UI.draft.cid!==UI.club)UI.draft={kind:
    <button class="btn block" data-a="saveCfg">Guardar definições</button><button class="btn danger block" data-a="delClub">Apagar este clube</button>`;return h};
 
 /* ---------- DEFINIÇÕES GERAIS ---------- */
+function metaList(m,key,fields,label,drag){return `${(m[key]||[]).map((r,i)=>`<div class="hrow" ${drag?`data-drow="${key}" data-idx="${i}"`:''}>${drag?'<span class="grip" aria-label="Arrastar">≡</span>':''}${fields.map(([f,l,t,w])=>t==='sel'?`<label class="mini" style="flex:0 0 ${w}">${l}<select data-c="mRow" data-key="${key}" data-i="${i}" data-f="${f}"><option value="max" ${r[f]==='max'?'selected':''}>maior</option><option value="min" ${r[f]==='min'?'selected':''}>menor</option></select></label>`:`<label class="mini" style="${w?'flex:0 0 '+w:''}">${l}<input ${t?`type="${t}"`:''} step="any" value="${esc(r[f]??'')}" data-c="mRow" data-key="${key}" data-i="${i}" data-f="${f}"></label>`).join('')}<button class="x" data-a="mRm" data-key="${key}" data-i="${i}">×</button></div>`).join('')}<button class="btn sm ghost" data-a="mAdd" data-key="${key}">+ ${label}</button>`;}
+const TEST_FIELDS=[['nome','Nome'],['un','Unid.','','55px'],['melhor','Melhor','sel','80px'],['tent','Tent.','number','50px'],['dec','Dec.','number','50px']];
 V.geral=()=>{if(UI.draft?.kind!=='meta')UI.draft={kind:'meta',m:copy(META())};const m=UI.draft.m;const Y=Object.keys(m.quotas||{}).sort();
-  const lst=(key,fields,label,drag)=>`${(m[key]||[]).map((r,i)=>`<div class="hrow" ${drag?`data-drow="${key}" data-idx="${i}"`:''}>${drag?'<span class="grip" aria-label="Arrastar">≡</span>':''}${fields.map(([f,l,t,w])=>t==='sel'?`<label class="mini" style="flex:0 0 ${w}">${l}<select data-c="mRow" data-key="${key}" data-i="${i}" data-f="${f}"><option value="max" ${r[f]==='max'?'selected':''}>maior</option><option value="min" ${r[f]==='min'?'selected':''}>menor</option></select></label>`:`<label class="mini" style="${w?'flex:0 0 '+w:''}">${l}<input ${t?`type="${t}"`:''} step="any" value="${esc(r[f]??'')}" data-c="mRow" data-key="${key}" data-i="${i}" data-f="${f}"></label>`).join('')}<button class="x" data-a="mRm" data-key="${key}" data-i="${i}">×</button></div>`).join('')}<button class="btn sm ghost" data-a="mAdd" data-key="${key}">+ ${label}</button>`;
+  const lst=(key,fields,label,drag)=>metaList(m,key,fields,label,drag);
   let h=back('Definições gerais')+`<div class="card"><h3>Quotas por ano civil</h3><p class="muted sm">Infantil = até aos 9 anos. Reduzido = quem entra entre setembro e dezembro (só federação e associação).</p>
    ${Y.map(y=>`<div class="blk"><b>${y}</b>${L.QITEMS.map(([it,l])=>`<div class="hrow"><span style="flex:0 0 78px" class="sm">${l}</span>${(it==='seg'?[['inf','Infantil'],['norm','Normal']]:[['inf','Infantil'],['norm','Normal'],['redInf','Red. inf.'],['redNorm','Red. norm.']]).map(([f,fl])=>`<label class="mini">${fl}<input type="number" step="0.01" value="${m.quotas[y][it]?.[f]??0}" data-c="mQ" data-y="${y}" data-it="${it}" data-f="${f}"></label>`).join('')}</div>`).join('')}</div>`).join('')}
    <button class="btn sm ghost" data-a="mQAdd">+ Ano ${Y.length?+Y[Y.length-1]+1:today().slice(0,4)}</button></div>
    <div class="card"><h3>Tipos de prémio</h3>${lst('awardTypes',[['nome','Nome'],['pts','Pontos','number','70px']],'tipo')}<h3 style="margin-top:12px">Pontos de assiduidade</h3><label>Valor de 100% de assiduidade (ex.: 93% = 9,3 pts)</label><input type="number" step="1" value="${m.assidMax??10}" data-c="mTop" data-k="assidMax"><p class="muted sm">O mês e cada trimestre valem até este valor; a época soma os três trimestres.</p></div>
-   <div class="card"><h3>Bateria de testes</h3>${lst('tests',[['nome','Nome'],['un','Unid.','','55px'],['melhor','Melhor','sel','80px'],['tent','Tent.','number','50px'],['dec','Dec.','number','50px']],'teste',1)}</div>
    <div class="card"><h3>Graduações</h3><textarea data-c="mGraus">${esc((m.graus||[]).join('\n'))}</textarea></div>
    <div class="card"><h3>Mensagens</h3><p class="muted sm">Variáveis: {nome} {clube} {detalhe} {mens}</p>${[['pag','Confirmação de mensalidade'],['lemb','Lembrete de mensalidade'],['quota','Confirmação de quotas e taxas'],['parab','Parabéns']].map(([k,l])=>`<label>${l}</label><textarea data-c="mMsg" data-k="${k}">${esc(m.msgs?.[k]||'')}</textarea>`).join('')}</div>
    <button class="btn block" data-a="saveMeta">Guardar definições</button>`;return h};
@@ -737,7 +742,8 @@ const A={
   saveAward:()=>{const d=UI.draft;const ids=Object.keys(d.sel).filter(x=>d.sel[x]);if(!ids.length){toast('Escolhe atletas');return}const t=META().awardTypes.find(x=>x.id===d.tipo)||{nome:'Prémio'};
     for(const ath of ids){const id='w'+uid();put('awards',id,{id,ath,tipo:d.tipo,nome:t.nome,pts:+d.pts||0,data:d.data,nota:d.nota})}toast(`+${d.pts} pts a ${ids.length} atleta(s)`);UI.draft=null;closeSheet()},
   delAward:d=>{if(confirm('Remover estes pontos?'))del('awards',d.id)},
-  newTest:()=>newTest(),openTest:d=>openTest(d.id),
+  newTest:()=>newTest(),openTest:d=>openTest(d.id),testCfg:()=>testCfg(),
+  saveTCfg:()=>{const nm=copy(META());nm.tests=UI.draft.m.tests||[];api().putMeta(nm);UI.draft=null;toast('Bateria de testes guardada');closeSheet()},
   tsTurma:d=>{if(ctx().tests[UI.tst.id]?.fechada)return;const s=copy(ctx().tests[UI.tst.id]);s.turmas=s.turmas.includes(d.t)?s.turmas.filter(x=>x!==d.t):[...s.turmas,d.t];put('tests',s.id,s)},
   tsTeste:d=>{if(ctx().tests[UI.tst.id]?.fechada)return;const s=copy(ctx().tests[UI.tst.id]);s.testes=s.testes.includes(d.id)?s.testes.filter(x=>x!==d.id):[...s.testes,d.id];put('tests',s.id,s)},
   tsTab:d=>{UI.tst.test=d.id;UI.sw.run=false;renderTest()},
@@ -761,8 +767,8 @@ const A={
     c.epocas[k]={inicio:`${k}-09-01`,fim:`${+k+1}-07-31`,meses:(c.epocas[prevK]?.meses||[]).map(m=>L.addMonths(m,12)),poupInicial:poup};saveClub(c);UI.season[UI.club]=k;pref('season',UI.season);UI.draft=null;toast('Época criada');render()},
   saveCfg:()=>{const c=UI.draft.c;c.horarios.sort((a,b)=>a.desde<b.desde?-1:1);for(const r of (c.cfg.descontos||[]))if(r.meses==='')delete r.meses;saveClub(c);UI.draft=null;toast('Definições guardadas');render()},
   delClub:async()=>{const n=CD().nome;if(!confirm('Apagar o clube '+n+' com TODOS os atletas, aulas e contas?'))return;if(prompt('Escreve o nome do clube para confirmar')!==n)return;const id=UI.club;UI.club=null;UI.tab='hoje';UI.draft=null;await api().delClub(id);toast('Clube apagado')},
-  mAdd:d=>{const m=UI.draft.m;const def={awardTypes:{id:'p'+uid(),nome:'',pts:5},assidTiers:{min:50,pts:1},tests:{id:'t'+uid(),nome:'',un:'',melhor:'max',tent:1,dec:0,prot:''}}[d.key];(m[d.key]=m[d.key]||[]).push(def);render()},
-  mRm:d=>{if(!confirm('Remover?'))return;UI.draft.m[d.key].splice(+d.i,1);render()},
+  mAdd:d=>{const m=UI.draft.m;const def={awardTypes:{id:'p'+uid(),nome:'',pts:5},assidTiers:{min:50,pts:1},tests:{id:'t'+uid(),nome:'',un:'',melhor:'max',tent:1,dec:0,prot:''}}[d.key];(m[d.key]=m[d.key]||[]).push(def);rrMeta()},
+  mRm:d=>{if(!confirm('Remover?'))return;UI.draft.m[d.key].splice(+d.i,1);rrMeta()},
   mQAdd:()=>{const m=UI.draft.m;const ys=Object.keys(m.quotas||{}).sort();const y=ys.length?String(+ys[ys.length-1]+1):today().slice(0,4);const base=ys.length?copy(m.quotas[ys[ys.length-1]]):{fed:{},ass:{},seg:{}};(m.quotas=m.quotas||{})[y]=base;render()},
   saveMeta:()=>{api().putMeta(UI.draft.m);UI.draft=null;toast('Definições guardadas');render()},
   exportAll:()=>{const o={app:'wadosensei',v:1,date:today(),meta:DB.meta,clubs:{}};for(const cid in DB.clubs)o.clubs[cid]=DB.clubs[cid];dl(`wadosensei-backup-${today()}.json`,JSON.stringify(o),'application/json')},
@@ -818,7 +824,7 @@ document.addEventListener('pointerdown',e=>{const g=e.target.closest('.grip');if
 document.addEventListener('pointermove',e=>{if(!DRG)return;const dy=e.clientY-DRG.y0;DRG.row.style.transform=`translateY(${dy}px)`;
   let to=DRG.from;DRG.rows.forEach((r,i)=>{if(r===DRG.row)return;const b=r.getBoundingClientRect(),mid=b.top+b.height/2;if(i>DRG.from&&e.clientY>mid)to=Math.max(to,i);if(i<DRG.from&&e.clientY<mid)to=Math.min(to,i)});DRG.to=to;
   DRG.rows.forEach((r,i)=>r.classList.toggle('dropmark',i===to&&to!==DRG.from))});
-const dragEnd=()=>{if(!DRG)return;const{key,from,to,row}=DRG;DRG=null;row.style.transform='';document.body.classList.remove('nosel');if(from!==to&&UI.draft?.m?.[key]){const arr=UI.draft.m[key];const[x]=arr.splice(from,1);arr.splice(to,0,x)}render()};
+const dragEnd=()=>{if(!DRG)return;const{key,from,to,row}=DRG;DRG=null;row.style.transform='';document.body.classList.remove('nosel');if(from!==to&&UI.draft?.m?.[key]){const arr=UI.draft.m[key];const[x]=arr.splice(from,1);arr.splice(to,0,x)}rrMeta()};
 document.addEventListener('pointerup',dragEnd);document.addEventListener('pointercancel',dragEnd);
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;const f=A[b.dataset.a];if(f){f(b.dataset,b,e)}});
 document.addEventListener('input',e=>{const t=e.target,f=t.dataset&&I[t.dataset.i];if(f)f(t)});

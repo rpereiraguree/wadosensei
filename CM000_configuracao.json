@@ -1,0 +1,888 @@
+{
+  "version": 3,
+  "id": "mwksu3v0",
+  "codigo": "CM000",
+  "nome": "",
+  "tip": "1",
+  "lado": "D",
+  "qtd": 1,
+  "emissoes": [
+    {
+      "e": "0",
+      "data": "2026-11-17",
+      "hora": "15:04",
+      "nota": "",
+      "docs": {
+        "PF_00_1E_BAR_1": {
+          "rev": 0,
+          "h": "82c14043"
+        },
+        "PF_00_1E_OSB_1": {
+          "rev": 0,
+          "h": "2fa35bb1"
+        },
+        "PF_00_1E_TRI_1": {
+          "rev": 0,
+          "h": "da2bcbda"
+        },
+        "PA_00_1E_PAR_1": {
+          "rev": 0,
+          "h": "2f3e3196"
+        },
+        "PA_00_1E_BAS_1": {
+          "rev": 0,
+          "h": "23dbea8f"
+        },
+        "PA_00_1E_TET_1": {
+          "rev": 0,
+          "h": "dda8d247"
+        },
+        "PM_00_1E": {
+          "rev": 0,
+          "h": "bae13ed7"
+        }
+      },
+      "pecas": {
+        "00_1E_BAR45x70.1": "BAR|45x70|4173|70|",
+        "00_1E_BAR45x70.2": "BAR|45x70|2298|70|",
+        "00_1E_BAR45x70.3": "BAR|45x70|474.5|70|",
+        "00_1E_BAR45x70.4": "BAR|45x70|467.5|70|",
+        "00_1E_BAR45x70.5": "BAR|45x70|2023|70|",
+        "00_1E_BAR45x70.6": "BAR|45x70|130|70|",
+        "00_1E_BAR45x70.7": "BAR|45x70|364|70|",
+        "00_1E_BAR45x70.8": "BAR|45x70|449.5|70|",
+        "00_1E_BAR45x70.9": "BAR|45x70|2250|70|",
+        "00_1E_BAR45x70.10": "BAR|45x70|4240|70|",
+        "00_1E_BAR45x70.11": "BAR|45x70|396|70|",
+        "00_1E_BAR70x110.1": "BAR|70x110|4173|110|",
+        "00_1E_BAR70x110.2": "BAR|70x110|2248|110|",
+        "00_1E_BAR70x110.3": "BAR|70x110|443.3|110|",
+        "00_1E_BAR70x110.4": "BAR|70x110|442.5|110|",
+        "00_1E_BAR70x110.5": "BAR|70x110|2250|110|",
+        "00_1E_BAR70x110.6": "BAR|70x110|4110|110|",
+        "00_1E_BAR70x110.7": "BAR|70x110|425|110|",
+        "00_1E_OSB12.1": "OSB|12|2165|1125|",
+        "00_1E_TRI16.1": "TRI|16|1061.5|2388|",
+        "00_1E_TRI16.2": "TRI|16|2050|2388|",
+        "00_1E_TRI16.3": "TRI|16|220|2388|",
+        "00_1E_TRI16.4": "TRI|16|863|2388|",
+        "00_1E_TRI16.5": "TRI|16|940|45|",
+        "00_1E_TRI16.6": "TRI|16|2023|2388|",
+        "00_1E_TRI16.7": "TRI|16|1140|2250|",
+        "00_1E_TRI16.8": "TRI|16|2050|2250|"
+      },
+      "alt": []
+    },
+    {
+      "e": "A",
+      "data": "2026-11-17",
+      "hora": "15:05",
+      "nota": "",
+      "docs": {
+        "PF_00_1E_BAR_1": {
+          "rev": 1,
+          "h": "1047b252"
+        },
+        "PF_00_1E_OSB_1": {
+          "rev": 0,
+          "h": "2fa35bb1"
+        },
+        "PF_00_1E_TRI_1": {
+          "rev": 0,
+          "h": "da2bcbda"
+        },
+        "PA_00_1E_PAR_1": {
+          "rev": 1,
+          "h": "0489f46e"
+        },
+        "PA_00_1E_BAS_1": {
+          "rev": 0,
+          "h": "23dbea8f"
+        },
+        "PA_00_1E_TET_1": {
+          "rev": 0,
+          "h": "dda8d247"
+        },
+        "PM_00_1E": {
+          "rev": 1,
+          "h": "78011e8b"
+        }
+      },
+      "pecas": {
+        "00_1E_BAR45x70.1": "BAR|45x70|4173|70|",
+        "00_1E_BAR45x70.2": "BAR|45x70|2298|70|",
+        "00_1E_BAR45x70.3": "BAR|45x70|474.5|70|",
+        "00_1E_BAR45x70.4": "BAR|45x70|467.5|70|",
+        "00_1E_BAR45x70.5": "BAR|45x70|2023|70|",
+        "00_1E_BAR45x70.6": "BAR|45x70|130|70|",
+        "00_1E_BAR45x70.7": "BAR|45x70|364|70|",
+        "00_1E_BAR45x70.8": "BAR|45x70|449.5|70|",
+        "00_1E_BAR45x70.9": "BAR|45x70|2250|70|",
+        "00_1E_BAR45x70.10": "BAR|45x70|4240|70|",
+        "00_1E_BAR45x70.11": "BAR|45x70|396|70|",
+        "00_1E_BAR70x110.1": "BAR|70x110|4173|110|",
+        "00_1E_BAR70x110.2": "BAR|70x110|2248|110|",
+        "00_1E_BAR70x110.3": "BAR|70x110|443.3|110|",
+        "00_1E_BAR70x110.4": "BAR|70x110|442.5|110|",
+        "00_1E_BAR70x110.5": "BAR|70x110|2250|110|",
+        "00_1E_BAR70x110.6": "BAR|70x110|4110|110|",
+        "00_1E_BAR70x110.7": "BAR|70x110|425|110|",
+        "00_1E_OSB12.1": "OSB|12|2165|1125|",
+        "00_1E_TRI16.1": "TRI|16|1061.5|2388|",
+        "00_1E_TRI16.2": "TRI|16|2050|2388|",
+        "00_1E_TRI16.3": "TRI|16|220|2388|",
+        "00_1E_TRI16.4": "TRI|16|863|2388|",
+        "00_1E_TRI16.5": "TRI|16|940|45|",
+        "00_1E_TRI16.6": "TRI|16|2023|2388|",
+        "00_1E_TRI16.7": "TRI|16|1140|2250|",
+        "00_1E_TRI16.8": "TRI|16|2050|2250|"
+      },
+      "alt": [
+        "PF_00_1E_BAR_1_REV1",
+        "PA_00_1E_PAR_1_REV1",
+        "PM_00_1E_REV1"
+      ]
+    },
+    {
+      "e": "B",
+      "data": "2026-11-17",
+      "hora": "17:08",
+      "nota": "",
+      "docs": {
+        "PF_00_1E_BAR_1": {
+          "rev": 2,
+          "h": "b63b1bcf"
+        },
+        "PF_00_1E_OSB_1": {
+          "rev": 1,
+          "h": "35812310"
+        },
+        "PF_00_1E_TRI_1": {
+          "rev": 1,
+          "h": "53be6fa2"
+        },
+        "PA_00_1E_PAR_1": {
+          "rev": 2,
+          "h": "4e48672b"
+        },
+        "PA_00_1E_BAS_1": {
+          "rev": 1,
+          "h": "466099d9"
+        },
+        "PA_00_1E_TET_1": {
+          "rev": 1,
+          "h": "10049d4b"
+        },
+        "PM_00_1E": {
+          "rev": 2,
+          "h": "6bd8e4cf"
+        }
+      },
+      "pecas": {
+        "00_1E_BAR45x70.4": "BAR|45x70|467.5|70|",
+        "00_1E_BAR45x70.6": "BAR|45x70|130|70|",
+        "00_1E_BAR45x70.12": "BAR|45x70|4250|70|",
+        "00_1E_BAR45x70.13": "BAR|45x70|2446|70|",
+        "00_1E_BAR45x70.14": "BAR|45x70|461.9|70|",
+        "00_1E_BAR45x70.15": "BAR|45x70|82.5|70|",
+        "00_1E_BAR45x70.16": "BAR|45x70|2366|70|",
+        "00_1E_BAR45x70.17": "BAR|45x70|535.5|70|",
+        "00_1E_BAR45x70.18": "BAR|45x70|2326|70|",
+        "00_1E_BAR45x70.19": "BAR|45x70|525.3|70|",
+        "00_1E_BAR45x70.20": "BAR|45x70|2452|70|",
+        "00_1E_BAR45x70.21": "BAR|45x70|4246|70|",
+        "00_1E_BAR45x70.22": "BAR|45x70|356.2|70|",
+        "00_1E_BAR45x110.1": "BAR|45x110|4250|110|",
+        "00_1E_BAR45x110.2": "BAR|45x110|2446|110|",
+        "00_1E_BAR45x110.3": "BAR|45x110|493.8|110|",
+        "00_1E_BAR45x110.4": "BAR|45x110|467.5|110|",
+        "00_1E_BAR70x110.8": "BAR|70x110|2452|110|",
+        "00_1E_BAR70x110.9": "BAR|70x110|4116|110|",
+        "00_1E_BAR70x110.10": "BAR|70x110|475.5|110|",
+        "00_1E_OSB12.2": "OSB|12|2168|1226|",
+        "00_1E_TRI16.5": "TRI|16|940|45|",
+        "00_1E_TRI16.9": "TRI|16|2050|2536|",
+        "00_1E_TRI16.10": "TRI|16|150|2536|",
+        "00_1E_TRI16.11": "TRI|16|220|2536|",
+        "00_1E_TRI16.12": "TRI|16|23|2536|",
+        "00_1E_TRI16.13": "TRI|16|1183|2536|",
+        "00_1E_TRI16.14": "TRI|16|1100|2536|",
+        "00_1E_TRI16.15": "TRI|16|1163|2536|",
+        "00_1E_TRI16.16": "TRI|16|1143|2452|",
+        "00_1E_TRI16.17": "TRI|16|2050|2452|"
+      },
+      "alt": [
+        "PF_00_1E_BAR_1_REV2",
+        "PF_00_1E_OSB_1_REV1",
+        "PF_00_1E_TRI_1_REV1",
+        "PA_00_1E_PAR_1_REV2",
+        "PA_00_1E_BAS_1_REV1",
+        "PA_00_1E_TET_1_REV1",
+        "PM_00_1E_REV2"
+      ]
+    },
+    {
+      "e": "C",
+      "data": "2026-11-17",
+      "hora": "17:18",
+      "nota": "",
+      "docs": {
+        "PF_00_1D_BAR_1": {
+          "rev": 0,
+          "h": "56f43cc1"
+        },
+        "PF_00_1D_OSB_1": {
+          "rev": 0,
+          "h": "4e98a229"
+        },
+        "PF_00_1D_TRI_1": {
+          "rev": 0,
+          "h": "46fc2bcf"
+        },
+        "PA_00_1D_PAR_1": {
+          "rev": 0,
+          "h": "58fc7b50"
+        },
+        "PA_00_1D_BAS_1": {
+          "rev": 0,
+          "h": "08af2846"
+        },
+        "PA_00_1D_TET_1": {
+          "rev": 0,
+          "h": "6a965eae"
+        },
+        "PM_00_1D": {
+          "rev": 0,
+          "h": "34bb623b"
+        }
+      },
+      "pecas": {
+        "00_1D_BAR45x70.1": "BAR|45x70|4250|70|",
+        "00_1D_BAR45x70.2": "BAR|45x70|2446|70|",
+        "00_1D_BAR45x70.3": "BAR|45x70|461.9|70|",
+        "00_1D_BAR45x70.4": "BAR|45x70|467.5|70|",
+        "00_1D_BAR45x70.5": "BAR|45x70|82.5|70|",
+        "00_1D_BAR45x70.6": "BAR|45x70|2366|70|",
+        "00_1D_BAR45x70.7": "BAR|45x70|130|70|",
+        "00_1D_BAR45x70.8": "BAR|45x70|535.5|70|",
+        "00_1D_BAR45x70.9": "BAR|45x70|2326|70|",
+        "00_1D_BAR45x70.10": "BAR|45x70|525.3|70|",
+        "00_1D_BAR45x70.11": "BAR|45x70|2452|70|",
+        "00_1D_BAR45x70.12": "BAR|45x70|4246|70|",
+        "00_1D_BAR45x70.13": "BAR|45x70|356.2|70|",
+        "00_1D_BAR45x110.1": "BAR|45x110|4250|110|",
+        "00_1D_BAR45x110.2": "BAR|45x110|2446|110|",
+        "00_1D_BAR45x110.3": "BAR|45x110|493.8|110|",
+        "00_1D_BAR45x110.4": "BAR|45x110|467.5|110|",
+        "00_1D_BAR70x110.1": "BAR|70x110|2452|110|",
+        "00_1D_BAR70x110.2": "BAR|70x110|4116|110|",
+        "00_1D_BAR70x110.3": "BAR|70x110|475.5|110|",
+        "00_1D_OSB12.1": "OSB|12|2168|1226|",
+        "00_1D_TRI16.1": "TRI|16|2050|2536|",
+        "00_1D_TRI16.2": "TRI|16|150|2536|",
+        "00_1D_TRI16.3": "TRI|16|220|2536|",
+        "00_1D_TRI16.4": "TRI|16|23|2536|",
+        "00_1D_TRI16.5": "TRI|16|940|45|",
+        "00_1D_TRI16.6": "TRI|16|1183|2536|",
+        "00_1D_TRI16.7": "TRI|16|1100|2536|",
+        "00_1D_TRI16.8": "TRI|16|1163|2536|",
+        "00_1D_TRI16.9": "TRI|16|1143|2452|",
+        "00_1D_TRI16.10": "TRI|16|2050|2452|"
+      },
+      "alt": [
+        "PF_00_1D_BAR_1",
+        "PF_00_1D_OSB_1",
+        "PF_00_1D_TRI_1",
+        "PA_00_1D_PAR_1",
+        "PA_00_1D_BAS_1",
+        "PA_00_1D_TET_1",
+        "PM_00_1D"
+      ]
+    }
+  ],
+  "step": 0,
+  "seen": 8,
+  "dim": {
+    "C": 4336,
+    "L": 2452,
+    "A": 2704
+  },
+  "vaos": {
+    "P1": false,
+    "P2": true,
+    "P3": false,
+    "P4": false
+  },
+  "estilos": [
+    {
+      "id": "mmwksxid38b2g",
+      "nome": "Estilo de camada 1",
+      "cor": "#D4006F",
+      "acab": [
+        {
+          "mid": "mmweyedivtz1x",
+          "nome": "Cola cimentícia C2",
+          "cat": "Adesivos",
+          "e": 2,
+          "custo": 10,
+          "un": "€/m²",
+          "fa": null,
+          "fb": null
+        },
+        {
+          "mid": "mmweyedivopgr",
+          "nome": "Azulima TC-16",
+          "cat": "Cerâmicos",
+          "e": 8,
+          "custo": 20,
+          "un": "€/m²",
+          "fa": 146,
+          "fb": 146
+        }
+      ],
+      "estr": [
+        {
+          "mid": "mmweyediv8sdq",
+          "nome": "OSB 12 mm",
+          "cat": "Madeiras",
+          "e": 12,
+          "custo": 15,
+          "un": "€/m²",
+          "fa": 2500,
+          "fb": 1250
+        },
+        {
+          "mid": "mmweyedivxtb0",
+          "nome": "Viga madeira 110×70 (deitada)",
+          "cat": "Estrutura",
+          "e": 70,
+          "custo": 4,
+          "un": "€/m",
+          "fa": null,
+          "fb": null
+        }
+      ],
+      "elems": [
+        "BASE"
+      ]
+    },
+    {
+      "id": "mmwkt0oqxwqwd",
+      "nome": "Estilo de camada 2",
+      "cor": "#0B6E99",
+      "acab": [
+        {
+          "mid": "mmweyedivtz1x",
+          "nome": "Cola cimentícia C2",
+          "cat": "Adesivos",
+          "e": 2,
+          "custo": 10,
+          "un": "€/m²",
+          "fa": null,
+          "fb": null
+        },
+        {
+          "mid": "mmweyedivopgr",
+          "nome": "Azulima TC-16",
+          "cat": "Cerâmicos",
+          "e": 8,
+          "custo": 20,
+          "un": "€/m²",
+          "fa": 146,
+          "fb": 146
+        }
+      ],
+      "estr": [
+        {
+          "mid": "mmweyedivq88q",
+          "nome": "Tricapa 16 mm",
+          "cat": "Madeiras",
+          "e": 16,
+          "custo": 1,
+          "un": "€/m²",
+          "fa": 2050,
+          "fb": 3000
+        },
+        {
+          "mid": "mmweyedivmgx9",
+          "nome": "Barrote madeira 45×70",
+          "cat": "Estrutura",
+          "e": 70,
+          "custo": 4,
+          "un": "€/m",
+          "fa": null,
+          "fb": null
+        }
+      ],
+      "elems": [
+        "COB"
+      ]
+    },
+    {
+      "id": "mmwkt2a9rdvgp",
+      "nome": "Estilo de camada 3",
+      "cor": "#7A5AF8",
+      "acab": [
+        {
+          "mid": "mmweyedivtz1x",
+          "nome": "Cola cimentícia C2",
+          "cat": "Adesivos",
+          "e": 2,
+          "custo": 10,
+          "un": "€/m²",
+          "fa": null,
+          "fb": null
+        },
+        {
+          "mid": "mmweyedivopgr",
+          "nome": "Azulima TC-16",
+          "cat": "Cerâmicos",
+          "e": 8,
+          "custo": 20,
+          "un": "€/m²",
+          "fa": 146,
+          "fb": 146
+        }
+      ],
+      "estr": [
+        {
+          "mid": "mmweyedivq88q",
+          "nome": "Tricapa 16 mm",
+          "cat": "Madeiras",
+          "e": 16,
+          "custo": 1,
+          "un": "€/m²",
+          "fa": 2050,
+          "fb": 3000
+        },
+        {
+          "mid": "mmweyedivxtb0",
+          "nome": "Viga madeira 45×110 (deitada)",
+          "cat": "Estrutura",
+          "e": 110,
+          "custo": 4,
+          "un": "€/m",
+          "fa": 110,
+          "fb": 45
+        }
+      ],
+      "elems": [
+        "P3"
+      ]
+    },
+    {
+      "id": "mmwkt3i0a6p9k",
+      "nome": "Estilo de camada 4",
+      "cor": "#E07B00",
+      "acab": [
+        {
+          "mid": "mmweyedivtz1x",
+          "nome": "Cola cimentícia C2",
+          "cat": "Adesivos",
+          "e": 2,
+          "custo": 10,
+          "un": "€/m²",
+          "fa": null,
+          "fb": null
+        },
+        {
+          "mid": "mmweyedivopgr",
+          "nome": "Azulima TC-16",
+          "cat": "Cerâmicos",
+          "e": 8,
+          "custo": 20,
+          "un": "€/m²",
+          "fa": 146,
+          "fb": 146
+        }
+      ],
+      "estr": [
+        {
+          "mid": "mmweyedivq88q",
+          "nome": "Tricapa 16 mm",
+          "cat": "Madeiras",
+          "e": 16,
+          "custo": 1,
+          "un": "€/m²",
+          "fa": 2050,
+          "fb": 3000
+        },
+        {
+          "mid": "mmwez3bmpptle",
+          "nome": "Barrote de pinho 45×70 (montante)",
+          "cat": "Estrutura",
+          "e": 70,
+          "custo": 4,
+          "un": "€/m",
+          "fa": null,
+          "fb": null
+        }
+      ],
+      "elems": [
+        "P4",
+        "P1",
+        "P2"
+      ]
+    }
+  ],
+  "montagem": {
+    "planta": {
+      "P1P2": "P1",
+      "P2P3": "P2",
+      "P3P4": "P3",
+      "P4P1": "P4"
+    },
+    "topo": {
+      "P1": "cob",
+      "P2": "cob",
+      "P3": "cob",
+      "P4": "cob"
+    },
+    "pe": {
+      "P1": "base",
+      "P2": "base",
+      "P3": "base",
+      "P4": "base"
+    }
+  },
+  "estr": {
+    "P1": {
+      "modo": "auto",
+      "eixoMax": 600,
+      "juntas": true,
+      "pos": [],
+      "trav": 2,
+      "desf": 100,
+      "vaos": [],
+      "sec": null
+    },
+    "P2": {
+      "modo": "auto",
+      "eixoMax": 600,
+      "juntas": true,
+      "pos": [],
+      "trav": 2,
+      "desf": 100,
+      "vaos": [
+        {
+          "pos": 220,
+          "larg": 940,
+          "alt": null
+        }
+      ],
+      "sec": null
+    },
+    "P3": {
+      "modo": "auto",
+      "eixoMax": 600,
+      "juntas": true,
+      "pos": [],
+      "trav": 2,
+      "desf": 100,
+      "vaos": [],
+      "sec": null
+    },
+    "P4": {
+      "modo": "auto",
+      "eixoMax": 600,
+      "juntas": true,
+      "pos": [],
+      "trav": 2,
+      "desf": 100,
+      "vaos": [],
+      "sec": null
+    },
+    "COB": {
+      "dir": "X",
+      "eixoMax": 450,
+      "qi": null,
+      "qs": 0,
+      "sec": null
+    },
+    "BASE": {
+      "dir": "X",
+      "eixoMax": 600,
+      "qi": null,
+      "qs": 0,
+      "sec": null
+    }
+  },
+  "ester": {
+    "P1": {
+      "areas": [
+        {
+          "id": "mmwkt4ilwl5kp",
+          "nome": "Área 1",
+          "mat": {
+            "mid": "mmweyedivopgr",
+            "nome": "Azulima TC-16",
+            "fa": 146,
+            "fb": 146
+          },
+          "iniH": "esq",
+          "iniV": "baixo",
+          "a0": [
+            0,
+            0
+          ],
+          "f0": [
+            0,
+            0
+          ],
+          "junta": 2,
+          "rodar": false,
+          "aceite": [
+            false,
+            false
+          ]
+        }
+      ],
+      "sel": 0
+    },
+    "BASE": {
+      "areas": [
+        {
+          "id": "mmwkt4pyssk54",
+          "nome": "Área 1",
+          "mat": {
+            "mid": "mmweyedivopgr",
+            "nome": "Azulima TC-16",
+            "fa": 146,
+            "fb": 146
+          },
+          "iniH": "esq",
+          "iniV": "baixo",
+          "a0": [
+            0,
+            0
+          ],
+          "f0": [
+            0,
+            0
+          ],
+          "junta": 2,
+          "rodar": false,
+          "aceite": [
+            false,
+            false
+          ]
+        }
+      ],
+      "sel": 0
+    },
+    "P2": {
+      "areas": [
+        {
+          "id": "mmwkt4pysafpo",
+          "nome": "Área 1",
+          "mat": {
+            "mid": "mmweyedivopgr",
+            "nome": "Azulima TC-16",
+            "fa": 146,
+            "fb": 146
+          },
+          "iniH": "esq",
+          "iniV": "baixo",
+          "a0": [
+            0,
+            0
+          ],
+          "f0": [
+            0,
+            0
+          ],
+          "junta": 2,
+          "rodar": false,
+          "aceite": [
+            false,
+            false
+          ]
+        }
+      ],
+      "sel": 0
+    },
+    "P3": {
+      "areas": [
+        {
+          "id": "mmwkt4pysg0d8",
+          "nome": "Área 1",
+          "mat": {
+            "mid": "mmweyedivopgr",
+            "nome": "Azulima TC-16",
+            "fa": 146,
+            "fb": 146
+          },
+          "iniH": "esq",
+          "iniV": "baixo",
+          "a0": [
+            0,
+            0
+          ],
+          "f0": [
+            0,
+            0
+          ],
+          "junta": 2,
+          "rodar": false,
+          "aceite": [
+            false,
+            false
+          ]
+        }
+      ],
+      "sel": 0
+    },
+    "P4": {
+      "areas": [
+        {
+          "id": "mmwkt4pysoj5q",
+          "nome": "Área 1",
+          "mat": {
+            "mid": "mmweyedivopgr",
+            "nome": "Azulima TC-16",
+            "fa": 146,
+            "fb": 146
+          },
+          "iniH": "esq",
+          "iniV": "baixo",
+          "a0": [
+            0,
+            0
+          ],
+          "f0": [
+            0,
+            0
+          ],
+          "junta": 2,
+          "rodar": false,
+          "aceite": [
+            false,
+            false
+          ]
+        }
+      ],
+      "sel": 0
+    },
+    "COB": {
+      "areas": [
+        {
+          "id": "mmwkt4pys4j45",
+          "nome": "Área 1",
+          "mat": {
+            "mid": "mmweyedivopgr",
+            "nome": "Azulima TC-16",
+            "fa": 146,
+            "fb": 146
+          },
+          "iniH": "esq",
+          "iniV": "baixo",
+          "a0": [
+            0,
+            0
+          ],
+          "f0": [
+            0,
+            0
+          ],
+          "junta": 2,
+          "rodar": false,
+          "aceite": [
+            false,
+            false
+          ]
+        }
+      ],
+      "sel": 0
+    }
+  },
+  "placas": {
+    "P1": {
+      "mmweyedivq88q_0": {
+        "ini": "i",
+        "a0": null,
+        "rodar": false
+      }
+    },
+    "P2": {
+      "mmweyedivq88q_0": {
+        "ini": "c",
+        "a0": null,
+        "rodar": false
+      }
+    },
+    "P3": {
+      "mmweyedivq88q_0": {
+        "ini": null,
+        "a0": null,
+        "rodar": false
+      }
+    },
+    "P4": {
+      "mmweyedivq88q_0": {
+        "ini": "c",
+        "a0": null,
+        "rodar": false
+      }
+    },
+    "COB": {
+      "mmweyedivq88q_0": {
+        "ix": "c",
+        "iy": "i",
+        "ax": null,
+        "ay": null,
+        "rodar": false
+      }
+    },
+    "BASE": {
+      "mmweyediv8sdq_0": {
+        "ix": "c",
+        "iy": "c",
+        "ax": null,
+        "ay": null,
+        "rodar": false
+      }
+    }
+  },
+  "equip": {
+    "P1": {
+      "eq": [],
+      "sd": []
+    },
+    "P2": {
+      "eq": [],
+      "sd": []
+    },
+    "P3": {
+      "eq": [],
+      "sd": []
+    },
+    "P4": {
+      "eq": [],
+      "sd": []
+    }
+  },
+  "encaixe": {
+    "P1P2": "P1",
+    "P2P3": "P2",
+    "P3P4": "P3",
+    "P4P1": "P4",
+    "pav": "pav",
+    "tet": "par"
+  },
+  "modulos": {
+    "n": 1,
+    "folga": 0,
+    "dir": "Y",
+    "esp": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "pProj": "CM000_Instalacoes_Sanitarias",
+  "pTip": "01_Tipologia-1E",
+  "fCfg": "00_1E_configuracao.json"
+}
