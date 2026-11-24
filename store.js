@@ -1,5 +1,5 @@
 // Camada de dados: Firebase (Auth + Firestore com cache offline) ou modo demo (localStorage).
-export const COLS=['athletes','sessions','payments','receitas','fees','events','ledger','awards','tests'];
+export const COLS=['athletes','sessions','payments','receitas','fees','events','ledger','awards','tests','tasks'];
 export const DB={meta:null,metaLoaded:false,clubs:{},clubsLoaded:false,user:null,mode:'firebase',pending:0,error:''};
 const emptyClub=()=>Object.fromEntries([['doc',null],...COLS.map(c=>[c,{}])]);
 const clean=o=>JSON.parse(JSON.stringify(o,(k,v)=>k==='virtual'?undefined:v));
@@ -29,7 +29,7 @@ async function firebaseAdapter(cfg){
   return{
     async login(){const p=new au.GoogleAuthProvider();try{await au.signInWithPopup(auth,p)}catch(e){if(['auth/popup-blocked','auth/operation-not-supported-in-this-environment','auth/cancelled-popup-request'].includes(e.code))await au.signInWithRedirect(auth,p);else throw e}},
     logout:()=>au.signOut(auth),
-    put(cid,col,id,data){const d=clean(data);if(col){(DB.clubs[cid]||(DB.clubs[cid]=emptyClub()))[col][id]=d}else{(DB.clubs[cid]||(DB.clubs[cid]=emptyClub())).doc=d}changed();track(fs.setDoc(cdoc(cid,col,id),d))},
+    put(cid,col,id,data){const d=clean(data);if(col){const c=DB.clubs[cid]||(DB.clubs[cid]=emptyClub());(c[col]||(c[col]={}))[id]=d}else{(DB.clubs[cid]||(DB.clubs[cid]=emptyClub())).doc=d}changed();track(fs.setDoc(cdoc(cid,col,id),d))},
     del(cid,col,id){if(col){delete DB.clubs[cid]?.[col]?.[id]}changed();track(fs.deleteDoc(cdoc(cid,col,id)))},
     putMeta(m){DB.meta=clean(m);changed();track(fs.setDoc(fs.doc(db,'users',uid,'meta','config'),DB.meta))},
     async bulk(ops){for(let i=0;i<ops.length;i+=400){const b=fs.writeBatch(db);for(const o of ops.slice(i,i+400)){const ref=o.meta?fs.doc(db,'users',uid,'meta','config'):cdoc(o.cid,o.col,o.id);o.del?b.delete(ref):b.set(ref,clean(o.data))}await b.commit()}},
@@ -43,11 +43,11 @@ function demoAdapter(){const KEY='wadosensei_demo';
   DB.metaLoaded=true;DB.clubsLoaded=true;DB.authReady=true;DB.user={uid:'demo',email:'modo demonstração',nome:'Demo'};
   const ensure=cid=>DB.clubs[cid]||(DB.clubs[cid]=emptyClub());
   return{login(){},logout(){localStorage.removeItem(KEY);location.href=location.pathname},
-    put(cid,col,id,data){const d=clean(data);if(col)ensure(cid)[col][id]=d;else ensure(cid).doc=d;save();changed()},
+    put(cid,col,id,data){const d=clean(data);if(col){const c=ensure(cid);(c[col]||(c[col]={}))[id]=d}else ensure(cid).doc=d;save();changed()},
     del(cid,col,id){if(col)delete DB.clubs[cid]?.[col]?.[id];save();changed()},
     putMeta(m){DB.meta=clean(m);save();changed()},
     async bulk(ops){for(const o of ops){if(o.meta){DB.meta=clean(o.data);continue}if(o.del){if(o.col)delete DB.clubs[o.cid]?.[o.col]?.[o.id];else delete DB.clubs[o.cid];continue}
-      if(o.col)ensure(o.cid)[o.col][o.id]=clean(o.data);else ensure(o.cid).doc=clean(o.data)}save();changed()},
+      if(o.col){const c=ensure(o.cid);(c[o.col]||(c[o.col]={}))[o.id]=clean(o.data)}else ensure(o.cid).doc=clean(o.data)}save();changed()},
     async delClub(cid){delete DB.clubs[cid];save();changed()}}}
 
 export async function init(cfg,cb,demo){onChange=cb;if(demo){DB.mode='demo';A=demoAdapter()}else{A=await firebaseAdapter(cfg)}changed();return A}
