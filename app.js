@@ -74,8 +74,29 @@ const back=t=>`<h2 class="ptitle">${t}</h2>`;
 V.welcome=()=>`<div class="card"><h2>Bem-vindo, Sensei</h2><p>Ainda não há clubes nesta conta. Posso criar já os dois clubes com tudo o que definimos: horários, turmas, valores e descontos.</p><p class="sm">Depois importa os atletas e o histórico de 25/26 em <b>Mais → Dados e backup → Importar backup</b>, com o ficheiro <b>cart-2025-26.json</b> (guardado só contigo, nunca no GitHub).</p>
   <button class="btn block" data-a="seedAll">Criar Cart Wado Karaté + Flexgym</button><button class="btn ghost block" data-a="newClub">Começar com um clube vazio</button>
   <p class="muted sm" style="margin-top:12px">Sessão: ${esc(DB.user.email)} · <a href="#" data-a="logout">sair</a></p></div>`;
-V.picker=clubs=>`<div class="picker">${clubs.sort((a,b)=>a.doc.nome.localeCompare(b.doc.nome,'pt')).map(c=>`<button class="pcard" data-a="pickClub" data-id="${c.doc.id}">${esc(c.doc.nome.toUpperCase())}</button>`).join('')}
-  <button class="padd" data-a="newClub" aria-label="Novo clube">+</button><p class="muted sm" style="text-align:center;margin-top:24px">${esc(DB.user.email)}${DB.mode==='demo'?' (demo)':''} · <a href="#" data-a="logout">Sair</a></p></div>`;
+V.picker=clubs=>{const all=clubs.flatMap(c=>tasksOf(c.doc.id).todo.map(t=>({t,c})));
+  return `<div class="picker">${clubs.sort((a,b)=>a.doc.nome.localeCompare(b.doc.nome,'pt')).map(c=>`<button class="pcard" data-a="pickClub" data-id="${c.doc.id}">${esc(c.doc.nome.toUpperCase())}</button>`).join('')}
+  <button class="padd" data-a="newClub" aria-label="Novo clube">+</button>
+  ${all.length?`<div class="ptasks"><div class="pth">A FAZER</div>${all.map(({t,c})=>`<div class="ptk"><span>•</span><span class="grow">${esc(t.txt)}${t.data?' '+tDate(t.data):''}</span><span class="muted sm">${esc(clubShort(c.doc))}</span></div>`).join('')}</div>`:''}<p class="muted sm" style="text-align:center;margin-top:24px">${esc(DB.user.email)}${DB.mode==='demo'?' (demo)':''} · <a href="#" data-a="logout">Sair</a></p></div>`};
+/* ---------- A FAZER (tarefas por clube) ---------- */
+const clubShort=d=>d.curto||String(d.nome||'').split(' ')[0];
+function tasksOf(cid){const all=Object.values(DB.clubs[cid]?.tasks||{});return{todo:all.filter(t=>!t.done).sort((a,b)=>(a.ord??0)-(b.ord??0)),done:all.filter(t=>t.done).sort((a,b)=>(b.doneAt||'')<(a.doneAt||'')?-1:1)}}
+function purgeTasks(){const lim=L.addDays(today(),-7);tasksOf(UI.club).done.filter(t=>(t.doneAt||'')<lim).forEach(t=>del('tasks',t.id))}
+function tasksCard(){const{todo,done}=tasksOf(UI.club);
+  return `<div class="card tasks"><div class="ch"><h3>A fazer</h3><span class="muted sm">${todo.length||''}</span></div>
+   <div class="row gap tnew"><input id="tNew" placeholder="Nova tarefa…" enterkeyhint="done" autocomplete="off"><button class="btn" data-a="tAdd" aria-label="Acrescentar">+</button></div>
+   ${todo.length?`<div class="tlist">${todo.map((t,i)=>`<div class="tk" data-drow="tasks" data-idx="${i}" data-id="${t.id}"><button class="tck" data-a="tDone" data-id="${t.id}" aria-label="Marcar como feita"></button><div class="grow ttx" data-a="tEdit" data-id="${t.id}"><div>${esc(t.txt)}</div>${t.notas||t.data?`<div class="tsub">${tDate(t.data)}${t.notas?`<span class="tnt">${esc(t.notas.split('\n')[0])}</span>`:''}</div>`:''}</div><span class="grip" aria-label="Arrastar">⋮⋮</span></div>`).join('')}</div>`:''}
+   ${done.length?`<details class="tdone"${UI.tdOpen?' open':''}><summary><span class="grow">Concluídas (${done.length})</span><button class="lnk" data-a="tClear">Limpar</button></summary>${done.map(t=>`<div class="tk done"><button class="tck on" data-a="tUndo" data-id="${t.id}" aria-label="Voltar a pôr por fazer">✓</button><div class="grow ttx">${esc(t.txt)}</div></div>`).join('')}</details>`:''}</div>`}
+function tPut(t){put('tasks',t.id,t)}
+function tDate(d){if(!d)return'';const dd=L.dayDiff(today(),d);const txt=dd===0?'hoje':dd===1?'amanhã':dd===-1?'ontem':(dd>1&&dd<7)?DOW[L.wdOf(d)]:`${DOW[L.wdOf(d)]} ${fmtD(d).slice(0,5)}`;return `<span class="tdt${dd<0?' late':dd===0?' now':''}">${txt}</span>`}
+function tEditSheet(id){const t=CL().tasks?.[id];if(!t)return;const qd=[['Hoje',today()],['Amanhã',L.addDays(today(),1)],['Próx. semana',L.addDays(today(),7)]];
+  openSheet(shH('Tarefa')+`<div class="card"><input id="tTxt" value="${esc(t.txt)}" placeholder="Título" style="font-weight:600">
+  <textarea id="tNotas" rows="3" placeholder="Notas" style="margin-top:8px">${esc(t.notas||'')}</textarea>
+  <div class="muted sm" style="margin:10px 0 4px">Data</div><div class="row gap"><input type="date" id="tData" value="${t.data||''}" class="grow"><button class="btn sm ghost" data-a="tDt" data-v="">Sem data</button></div>
+  <div class="row gap" style="margin-top:6px;flex-wrap:wrap">${qd.map(([l,v])=>`<button class="btn sm ghost" data-a="tDt" data-v="${v}">${l}</button>`).join('')}</div>
+  <div class="row gap" style="margin-top:10px"><button class="btn ghost" data-a="tDel" data-id="${id}" style="color:var(--bad)">Apagar</button><span class="grow"></span><button class="btn" data-a="tSave" data-id="${id}">Guardar</button></div></div>`);setTimeout(()=>$('#tTxt')?.focus(),50)}
+let UNDO=null;function showUndo(txt,fn){UNDO=fn;let el=$('#undo');if(!el){el=document.createElement('div');el.id='undo';document.body.appendChild(el)}
+  el.innerHTML=`<span>${esc(txt)}</span><button data-a="undo">Anular</button>`;el.classList.add('show');clearTimeout(showUndo._t);showUndo._t=setTimeout(()=>{el.classList.remove('show');UNDO=null},5000)}
 
 /* ---------- AULAS (inclui o antigo Hoje) ---------- */
 function sessionsOn(d){return L.sessionsBetween(CD(),CL().sessions,d,d)}
@@ -117,7 +138,7 @@ V.aulas=()=>{const cd=CD(),t=today(),cx=ctx();
   return `<div class="topcard"><div class="ch"><h3>${d===t?'Aulas de hoje':'Próximas aulas'}</h3><span class="muted sm">${DOWL[L.wdOf(d)]} ${fmtD(d)}</span></div>
     ${ss.length?`<div class="list">${ss.map(s=>sessRow(s)).join('')}</div>`:empty('Sem aulas nos próximos dias.')}
     ${nextEv.length?`<div class="list">${nextEv.map(e=>evRow(e,true)).join('')}</div>`:''}</div>
-   <div class="row gap"><button class="btn grow" data-a="goMes">Aulas do mês</button><button class="btn ghost" data-a="addMenu">+ Adicionar</button><button class="btn ${al?'alert':'ghost'}" data-a="showAlerts">${al} Alerta${al===1?'':'s'}</button></div>`};
+   <div class="row gap"><button class="btn grow" data-a="goMes">Aulas do mês</button><button class="btn ghost" data-a="addMenu">+ Adicionar</button><button class="btn ${al?'alert':'ghost'}" data-a="showAlerts">${al} Alerta${al===1?'':'s'}</button></div>${(purgeTasks(),tasksCard())}`};
 V.mes=()=>{const cd=CD(),k=K(),t=today(),cx=ctx(),ep=cd.epocas[k]||{};
   const months=[];if(ep.inicio){let m=ep.inicio.slice(0,7);const end=(ep.fim||L.addDays(ep.inicio,330)).slice(0,7);while(m<=end){months.push(m);m=L.addMonths(m,1)}}
   if(!UI.aul.m||!months.includes(UI.aul.m))UI.aul.m=months.includes(t.slice(0,7))?t.slice(0,7):months[months.length-1];const m=UI.aul.m;
@@ -597,6 +618,15 @@ function msgVars(id,items,detailFn){return{nome:N(id),clube:CD().nome,detalhe:de
 function quotaGen(Y){const cx=ctx(),k=(CD().epocas[String(+Y-1)]?String(+Y-1):K());const as=Object.values(cx.athletes).filter(a=>L.enr(a,k)&&!L.enr(a,k).ate);let n=0;
   for(const a of as)for(const[it]of L.QITEMS){const id=`q_${Y}_${it}_${a.id}`;if(!cx.fees[id]){put('fees',id,{id,ano:Y,item:it,ath:a.id,red:false,estado:'falta'});n++}}toast(n?`${n} quotas de ${Y} criadas`:'Já estavam todas criadas')}
 const A={
+  tAdd:()=>{const i=$('#tNew');const txt=(i?.value||'').trim();if(!txt){i?.focus();return}const{todo}=tasksOf(UI.club);const ord=todo.length?Math.max(...todo.map(t=>t.ord??0))+1:0;tPut({id:uid(),txt,ord,done:false,criada:today()});render();setTimeout(()=>$('#tNew')?.focus(),0)},
+  tDone:d=>{const t=CL().tasks?.[d.id];if(t){tPut({...t,done:true,doneAt:today()});render()}},
+  tUndo:(d,el,e)=>{e.preventDefault();const t=CL().tasks?.[d.id];if(t){const{todo}=tasksOf(UI.club);tPut({...t,done:false,doneAt:null,ord:todo.length?Math.max(...todo.map(x=>x.ord??0))+1:0});render()}},
+  tClear:(d,el,e)=>{e.preventDefault();e.stopPropagation();const{done}=tasksOf(UI.club);if(!done.length||!confirm(`Apagar ${done.length} tarefa(s) concluída(s)?`))return;done.forEach(t=>del('tasks',t.id));render()},
+  tEdit:d=>tEditSheet(d.id),
+  tSave:d=>{const t=CL().tasks?.[d.id];const txt=($('#tTxt')?.value||'').trim();if(t&&txt)tPut({...t,txt,notas:($('#tNotas')?.value||'').trim(),data:$('#tData')?.value||''});closeSheet()},
+  tDt:d=>{const i=$('#tData');if(i)i.value=d.v},
+  tDel:d=>{const t=copy(CL().tasks?.[d.id]||null);if(!t)return;const cid=UI.club;del('tasks',t.id);closeSheet();showUndo('Tarefa apagada',()=>{api().put(cid,'tasks',t.id,t)})},
+  undo:()=>{const f=UNDO;UNDO=null;$('#undo')?.classList.remove('show');if(f){f();render()}},
   login:async()=>{try{await api().login()}catch(e){alert('Não foi possível entrar: '+(e.code||e.message))}},
   logout:(d,el,e)=>{e.preventDefault();if(confirm('Sair da conta?'))api().logout()},
   clrErr:()=>{DB.error='';render()},
@@ -824,7 +854,10 @@ document.addEventListener('pointerdown',e=>{const g=e.target.closest('.grip');if
 document.addEventListener('pointermove',e=>{if(!DRG)return;const dy=e.clientY-DRG.y0;DRG.row.style.transform=`translateY(${dy}px)`;
   let to=DRG.from;DRG.rows.forEach((r,i)=>{if(r===DRG.row)return;const b=r.getBoundingClientRect(),mid=b.top+b.height/2;if(i>DRG.from&&e.clientY>mid)to=Math.max(to,i);if(i<DRG.from&&e.clientY<mid)to=Math.min(to,i)});DRG.to=to;
   DRG.rows.forEach((r,i)=>r.classList.toggle('dropmark',i===to&&to!==DRG.from))});
-const dragEnd=()=>{if(!DRG)return;const{key,from,to,row}=DRG;DRG=null;row.style.transform='';document.body.classList.remove('nosel');if(from!==to&&UI.draft?.m?.[key]){const arr=UI.draft.m[key];const[x]=arr.splice(from,1);arr.splice(to,0,x)}rrMeta()};
+const dragEnd=()=>{if(!DRG)return;const{key,from,to,row}=DRG;DRG=null;row.style.transform='';document.body.classList.remove('nosel');if(key==='tasks'){document.querySelectorAll('.dropmark').forEach(r=>r.classList.remove('dropmark'));if(from!==to){const arr=tasksOf(UI.club).todo;const[x]=arr.splice(from,1);arr.splice(to,0,x);arr.forEach((t,i)=>{if(t.ord!==i)tPut({...t,ord:i})})}render();return}
+  if(from!==to&&UI.draft?.m?.[key]){const arr=UI.draft.m[key];const[x]=arr.splice(from,1);arr.splice(to,0,x)}rrMeta()};
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='tNew'){e.preventDefault();A.tAdd()}});
+document.addEventListener('toggle',e=>{if(e.target.classList?.contains('tdone'))UI.tdOpen=e.target.open},true);
 document.addEventListener('pointerup',dragEnd);document.addEventListener('pointercancel',dragEnd);
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;const f=A[b.dataset.a];if(f){f(b.dataset,b,e)}});
 document.addEventListener('input',e=>{const t=e.target,f=t.dataset&&I[t.dataset.i];if(f)f(t)});
