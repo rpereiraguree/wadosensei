@@ -47,7 +47,7 @@ const TABS=[['aulas','Aulas','<rect x="3" y="4" width="18" height="17" rx="2"/><
   ['atletas','Atletas','<circle cx="9" cy="8" r="4"/><path d="M2 21v-1a6 6 0 0 1 12 0v1M16 3.5a4 4 0 0 1 0 8M22 21v-1a6 6 0 0 0-4-5.6"/>'],
   ['testes','Testes','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/>'],
   ['mais','Mais','<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>']];
-const MAIS_SUB=['premios','lotacao','contas','config','geral','dados'];
+const MAIS_SUB=['premios','secretaria','lotacao','contas','config','geral','dados'];const SEC_SUB=['lotacao','contas','geral'];
 function render(){
   const hdr=$('#hdr'),nav=$('#tabs'),view=$('#view');
   if(!DB.authReady){hdr.innerHTML='<h1>Wado Sensei</h1>';nav.innerHTML='';view.innerHTML='<div class="empty">A carregar…</div>';return}
@@ -105,8 +105,11 @@ function trocaIn(s){return s.vem||{}}
 function expectedList(s){const k=L.seasonOf(s.data),wd=L.wdOf(s.data),m=s.data.slice(0,7);const out=trocaOut(s),inn=trocaIn(s);
   const base=athsIn(k,s.turma,m).filter(a=>(L.enr(a,k).dias||[]).includes(wd)&&!out[a.id]);const extra=Object.keys(inn).map(id=>ctx().athletes[id]).filter(a=>a&&!base.includes(a));return[...base,...extra]}
 function sessCounts(s){const exp=expectedList(s).length;const P=Object.values(s.pres||{}).filter(v=>v==='P').length;return{exp,P}}
-const isAlt=s=>!!(s.hOrig&&(s.hOrig.ini!==s.ini||s.hOrig.fim!==s.fim));
-function chipOf(s){const t=today();if(s.estado==='feriado')return `<span class="tag t-mut">${esc(s.motivo||'Feriado')}</span>`;if(s.fer&&s.estado!=='cancelada')return `<span class="tag t-blue">${esc(s.fer)} · com aula${isAlt(s)?' · horário diferente':''}</span>`;if(isAlt(s)&&s.estado!=='cancelada')return `<span class="tag t-blue">Horário diferente (era ${esc(s.hOrig.ini)})</span>`;if(s.estado==='cancelada'){const r=L.reposedBy(CL().sessions,s.id);return `<span class="tag t-bad">Cancelada${r?' · reposta '+fmtD(r.data).slice(0,5):' · por repor'}</span>`}
+const slotOf=s=>L.slotsOn(CD(),s.data).find(x=>x.t===s.turma);
+const origOf=s=>s.hOrig||(()=>{const x=slotOf(s);return x?{ini:x.ini||'',fim:x.fim||''}:null})();
+const isAlt=s=>{if(s.tipo&&s.tipo!=='normal')return false;const o=origOf(s);return !!(o&&(o.ini!==(s.ini||'')||o.fim!==(s.fim||'')))};
+const ferOf=s=>s.fer||L.semAulas(CD(),s.data)||'';
+function chipOf(s){const t=today();if(s.estado==='feriado')return `<span class="tag t-mut">${esc(s.motivo||'Feriado')}</span>`;if(ferOf(s)&&s.estado!=='cancelada'&&s.estado!=='feriado')return `<span class="tag t-blue">${esc(ferOf(s))} · com aula${isAlt(s)?' · horário diferente':''}</span>`;if(isAlt(s)&&s.estado!=='cancelada')return `<span class="tag t-blue">Horário diferente (era ${esc(origOf(s).ini)})</span>`;if(s.estado==='cancelada'){const r=L.reposedBy(CL().sessions,s.id);return `<span class="tag t-bad">Cancelada${r?' · reposta '+fmtD(r.data).slice(0,5):' · por repor'}</span>`}
   if(s.virtual)return s.data<t?'<span class="tag t-warn">Por registar</span>':'';
   const lab=s.tipo==='reposicao'?'Reposição':s.tipo==='extra'?'Extra':'';
   if(s.estado!=='dada')return lab?`<span class="tag t-blue">${lab}</span>`:'';return lab?`<span class="tag t-blue">${lab}</span>`:''}
@@ -345,7 +348,29 @@ CV.mens=()=>{const cd=CD(),k=K(),cx=ctx(),ep=cd.epocas[k];if(!UI.con.m||!ep.mese
   return `<select data-c="conM">${ep.meses.map(x=>`<option value="${x}" ${x===m?'selected':''}>${mLabel(x)}</option>`).join('')}</select>
   <div class="kpis" style="margin-top:10px"><div class="kpi"><small>Recebido</small><b>${eur(f.rec)}</b></div><div class="kpi" data-a="goDeve" style="cursor:pointer"><small>Em falta até ${mShort(m)}</small><b style="color:${f.due?'var(--bad)':'inherit'}">${eur(f.due)}</b><small>${ids.length} atleta(s) · ver ›</small></div>
   <div class="kpi"><small>Pagar ${en} (${f.pct}%)</small><b>${eur(f.ent)}</b><small>c/ em falta ${eur(f.ent+f.dueEnt)}</small></div><div class="kpi"><small>Treinador</small><b>${eur(f.tr)}</b><small>c/ em falta ${eur(f.tr+f.dueTr)}</small></div></div>
+  <button class="btn block" data-a="cartRep">🖨 Relatório do mês · ${en}</button>
   <p class="muted sm">Os pagamentos registam-se em Atletas → Pagamentos de cada atleta.</p>`};
+/* ---------- RELATÓRIO MENSAL PARA A ENTIDADE (transparência) ---------- */
+function printEntReport(m){const cd=CD(),k=K(),cx=ctx();const f=L.finGestao(cd,cx,k,m);const en=cd.cfg?.entNome||'Espaço';const last=L.addDays(L.addMonths(m,1)+'-01',-1);
+  const given=Object.values(CL().sessions).filter(s=>L.isGiven(s)&&s.data>=m+'-01'&&s.data<=last);const cnt={};given.forEach(s=>{for(const id in (s.pres||{}))if(s.pres[id]==='P')cnt[id]=(cnt[id]||0)+1});
+  const ST={pago:'Pago',isento:'Isento',isentoFixo:'Isento',semPres:'Sem presenças',falta:'Em falta'};
+  const rows=athsIn(k,'',m).map(a=>({a,st:L.monthStatus(cd,a,cx,k,m),n:cnt[a.id]||0})).filter(x=>x.st);
+  const vieram=rows.filter(x=>x.n>0).length;const pagos=rows.filter(x=>x.st.st==='pago');const falta=rows.filter(x=>x.st.st==='falta');
+  const pct=f.pct,sh=+cd.cfg?.poupShare||0,poupNome=cd.cfg?.poupNome||'Poupança';const mes=mLabel(m);
+  let tb=rows.map(({a,st,n})=>`<tr><td style="text-align:left">${esc(nameOf(a))}</td><td>${esc(turma(L.enr(a,k).turma).nome)}</td><td>${n}</td><td style="text-align:left">${ST[st.st]}</td><td>${st.st==='pago'?eur(st.v):st.st==='falta'?'<span class="pv">('+eur(st.v)+')</span>':'—'}</td><td>${st.st==='pago'&&st.d?fmtD(st.d):''}</td></tr>`).join('');
+  const h=`<div class="mp"><h1>${esc(cd.nome)}</h1><h3>Relatório de ${esc(mes)} · ${esc(en)}</h3>
+   <table><tr><th>Aulas dadas no mês</th><td>${given.length}</td><th>Atletas inscritos</th><td>${rows.length}</td><th>Atletas que vieram</th><td>${vieram}</td></tr></table>
+   <table><thead><tr><th style="text-align:left">Atleta</th><th>Turma</th><th>Presenças</th><th style="text-align:left">Mensalidade</th><th>Valor</th><th>Data</th></tr></thead><tbody>${tb||'<tr><td colspan="6">Sem atletas</td></tr>'}</tbody>
+   <tbody><tr><td colspan="4" style="text-align:left"><b>Total recebido</b> (${pagos.length} pagamento${pagos.length===1?'':'s'})</td><td><b>${eur(f.rec)}</b></td><td></td></tr></tbody></table>
+   <table class="box"><tr><th colspan="2" style="text-align:left">Divisão do valor recebido</th></tr>
+    <tr><td>${esc(en)} · ${pct}% de ${eur(f.rec)}</td><td>${eur(L.round2(f.rec*pct/100))}</td></tr>
+    ${f.poup?`<tr><td>− ${sh}% de ${eur(f.poup)} para a ${esc(poupNome)}</td><td>− ${eur(L.round2(f.poup*sh/100))}</td></tr>`:''}
+    <tr><td><b>Valor a entregar · ${esc(en)}</b></td><td><b>${eur(f.ent)}</b></td></tr>
+    <tr><td>Treinador · ${100-pct}% de ${eur(f.rec)}${f.poup?` − ${100-sh}% da ${esc(poupNome)}`:''}</td><td>${eur(f.tr)}</td></tr>
+    ${f.poup?`<tr><td>${esc(poupNome)} (fundo do clube)</td><td>${eur(f.poup)}</td></tr>`:''}</table>
+   ${falta.length?`<p style="font-size:11px">Mensalidades em falta neste mês (${falta.length}): ${eur(falta.reduce((s,x)=>s+(+x.st.v||0),0))}. Quando forem pagas, entram na divisão e no relatório deste mês.</p>`:''}
+   <table style="margin-top:28px"><tr><td style="height:40px;vertical-align:bottom;text-align:left">Entregue por: ______________________</td><td style="vertical-align:bottom;text-align:left">Recebido por: ______________________</td></tr><tr><td colspan="2" style="text-align:left">Data: ____/____/______</td></tr></table></div>`;
+  $('#print').innerHTML=h;setTimeout(()=>window.print(),80)}
 CV.epoca=()=>{const cd=CD(),k=K(),cx=ctx(),ep=cd.epocas[k];const now=today().slice(0,7);const ms=(ep.meses||[]).filter(m=>m<=now);let T={rec:0,ent:0,tr:0,poup:0};
   const rows=ms.map(m=>{const f=L.finGestao(cd,cx,k,m);T.rec+=f.rec;T.ent+=f.ent;T.tr+=f.tr;T.poup+=f.poup;return `<tr><td>${mShort(m)}</td><td>${eur(f.rec)}</td><td>${eur(f.ent)}</td><td>${eur(f.tr)}</td><td>${eur(f.poup)}</td></tr>`});
   return `<div class="card"><h3>Época ${seasonLabel(k)} até ${mShort(now).toLowerCase()}</h3><div class="tscroll"><table class="tbl"><thead><tr><th>Mês</th><th>Recebido</th><th>${esc(cd.cfg?.entNome||'Espaço')}</th><th>Treinador</th><th>Poupança</th></tr></thead><tbody>${rows.join('')}
@@ -431,10 +456,12 @@ function renderMov(){const{x,isNew}=UI.draft;const tipos=[['saida','Saída da po
 
 /* ---------- MAIS ---------- */
 V.mais=()=>{const k=K();const nk=String(Math.max(...Object.keys(CD().epocas).map(Number))+1);
-  const items=[['tab:premios','🏅','Prémios e pontos','Destaque do mês, prémio trimestral e classificação da época'],['tab:lotacao','🪑','Lotação','Alunos e vagas por treino, receita com a sala cheia, simulador'],['tab:contas','💶','Contas','Mês, época, poupança, quotas e taxas, todos os clubes'],['newSeasonM','📅',`Nova época (${seasonLabel(nk)})`,'Cria a época seguinte e leva à reinscrição dos atletas'],
-  ['tab:config','⚙️','Definições do clube','Turmas, horários e lotação, feriados, épocas, valores, aniversários'],['tab:geral','🧩','Definições gerais','Quotas por ano, pontos, graus e mensagens'],['tab:dados','💾','Dados e backup','Exportar, importar, CSV']];
-  return `<div class="list">${items.map(([a,i,l,s])=>{const[act,t]=a.split(':');return `<div class="li" data-a="${t?'tab':act}" ${t?`data-t="${t}"`:''}><span style="font-size:22px">${i}</span><div class="grow"><div class="nm">${l}</div><div class="muted sm">${s}</div></div><span class="muted">›</span></div>`}).join('')}</div>
-  <p class="muted sm" style="text-align:center">${esc(DB.user.email)}${DB.mode==='demo'?' (demo)':''} · <a href="#" data-a="logout">Sair</a></p>`};
+  const items=[['tab:premios','🏅','Prémios e pontos','Destaque do mês, prémio trimestral e classificação da época'],['tab:secretaria','🗂️','Secretaria','Lotação, contas, nova época e definições gerais'],
+  ['tab:config','⚙️','Definições do clube','Turmas, horários e lotação, feriados, épocas, valores, aniversários'],['tab:dados','💾','Dados e backup','Exportar, importar, CSV']];
+  return menuList(items)+`<p class="muted sm" style="text-align:center">${esc(DB.user.email)}${DB.mode==='demo'?' (demo)':''} · <a href="#" data-a="logout">Sair</a></p>`};
+V.secretaria=()=>{const nk=String(Math.max(...Object.keys(CD().epocas).map(Number))+1);
+  return back('Secretaria')+menuList([['tab:lotacao','🪑','Lotação','Alunos e vagas por treino, receita com a sala cheia, simulador'],['tab:contas','💶','Contas','Mês, época, poupança, quotas e taxas, todos os clubes'],['newSeasonM','📅',`Nova época (${seasonLabel(nk)})`,'Cria a época seguinte e leva à reinscrição dos atletas'],['tab:geral','🧩','Definições gerais','Quotas por ano, pontos, graus e mensagens']])};
+function menuList(items){return `<div class="list">${items.map(([a,i,l,s])=>{const[act,t]=a.split(':');return `<div class="li" data-a="${t?'tab':act}" ${t?`data-t="${t}"`:''}><span style="font-size:22px">${i}</span><div class="grow"><div class="nm">${l}</div><div class="muted sm">${s}</div></div><span class="muted">›</span></div>`}).join('')}</div>`}
 function periodKey(k,t){return t==='E'?`${k}-E`:t.startsWith('M:')?t.slice(2):`${k}-${t}`}
 function periodLabel(t){return t==='E'?'Prémio da época':t.startsWith('M:')?`Destaque de ${L.MESES[+t.slice(7,9)-1].toLowerCase()}`:`Prémio do ${L.TRIM.find(x=>x[0]===t)[1]}`}
 function winners(tab,turmaId){const pc=x=>Math.round((x.pct??-1)*1000);const rows=Object.values(tab).filter(x=>x.turma===turmaId).sort((a,b)=>b.tot-a.tot||pc(b)-pc(a));if(!rows.length||!(rows[0].tot>0))return[];return rows.filter(x=>x.tot===rows[0].tot&&pc(x)===pc(rows[0]))}
@@ -518,9 +545,9 @@ function renderPlan(){const d=UI.draft;const rows=monthRows(d.m);
 function planTitle(){const cd=CD();const t=cd.cfg?.titulo;if(t)return t;const n=cd.nome.toUpperCase();return /WADO/.test(n)?n:n+' WADO KARATÉ'}
 function monthRows(m){const cd=CD();const last=L.addDays(L.addMonths(m,1)+'-01',-1);const all=L.sessionsBetween(cd,CL().sessions,m+'-01',last);const ss=all.filter(s=>s.estado!=='cancelada'&&s.estado!=='feriado');
   const loc=cd.cfg?.local||cd.nome;const byDate={};const PR={aula:3,hd:4,rep:2,extra:1};
-  for(const s of ss){const t=s.tipo==='reposicao'?'rep':s.tipo==='extra'?'extra':(s.fer||isAlt(s))?'hd':'aula';const x=byDate[s.data]||(byDate[s.data]={data:s.data,tipo:t,fer:''});if(PR[t]>PR[x.tipo])x.tipo=t;if(s.fer)x.fer=s.fer}
+  for(const s of ss){const fe=s.tipo==='normal'?ferOf(s):'';const t=s.tipo==='reposicao'?'rep':s.tipo==='extra'?'extra':(fe||isAlt(s))?'hd':'aula';const x=byDate[s.data]||(byDate[s.data]={data:s.data,tipo:t,fer:'',alt:false});if(PR[t]>PR[x.tipo])x.tipo=t;if(fe)x.fer=fe;if(isAlt(s))x.alt=true}
   for(const s of all.filter(s=>s.estado==='feriado'))if(!byDate[s.data])byDate[s.data]={data:s.data,tipo:'nf',fer:s.motivo||'Feriado'};
-  const rows=Object.values(byDate).map(x=>({data:x.data,tipo:x.tipo,nome:x.tipo==='rep'?'Aula Reposição':x.tipo==='extra'?'Aula Extra':x.tipo==='nf'?`Sem aula (${x.fer})`:x.tipo==='hd'?(x.fer?`Aula (${x.fer})`:'Aula · horário diferente'):'Aula',local:x.tipo==='nf'?'—':loc}));
+  const rows=Object.values(byDate).map(x=>({data:x.data,tipo:x.tipo,nome:x.tipo==='rep'?'Aula Reposição':x.tipo==='extra'?'Aula Extra':x.tipo==='nf'?`Sem aula (${x.fer})`:x.tipo==='hd'?`Aula${x.fer?` (${x.fer})`:''}${x.alt?' · horário diferente':''}`:'Aula',local:x.tipo==='nf'?'—':loc}));
   for(const e of Object.values(ctx().events))if(e.data>=m+'-01'&&e.data<=last)rows.push({data:e.data,tipo:'ev',nome:e.nome,local:e.local||'',ev:e});
   return rows.sort((a,b)=>a.data!==b.data?(a.data<b.data?-1:1):(a.tipo==='ev'?1:-1)).map(r=>({...r,sem:L.weekNo(cd,r.data)}))}
 const hh=t=>t?t.replace(':','h'):'';
@@ -536,8 +563,8 @@ function printMonth(m,frase){const cd=CD(),k=L.seasonOf(m+'-15');const rows=mont
   const reps=Object.values(CL().sessions).filter(s=>s.tipo==='reposicao'&&s.estado!=='cancelada'&&s.data>=m+'-01'&&s.data<=last);
   if(reps.length){const slots={};reps.forEach(s=>{const key=`${s.ini}|${s.fim}`;(slots[key]=slots[key]||new Set()).add(turma(s.turma).nome)});const keys=Object.keys(slots).sort();
     const single=keys.length===1;h+=`<table class="box"><tr><th colspan="2" class="rp">Horário Aula de Reposição</th></tr>${keys.map(key=>{const[a,b]=key.split('|');const lab=[...slots[key]].join(' e ');return single&&slots[key].size>1?`<tr><td colspan="2">${hh(a)} – ${hh(b)}</td></tr>`:`<tr><td>Aula ${esc(lab)}:</td><td>${hh(a)} – ${hh(b)}</td></tr>`}).join('')}</table>`}
-  {const alt=L.sessionsBetween(cd,CL().sessions,m+'-01',last).filter(s=>s.tipo==='normal'&&s.estado!=='cancelada'&&s.estado!=='feriado'&&(s.fer||isAlt(s)));
-   if(alt.length)h+=`<table class="box"><tr><th colspan="2" class="hd">Horário diferente do habitual</th></tr>${alt.map(s=>`<tr><td>${fmtD(s.data).slice(0,5)}${s.fer?' ('+esc(s.fer)+')':''} · Aula ${esc(turma(s.turma).nome)}:</td><td>${hh(s.ini)} – ${hh(s.fim)}</td></tr>`).join('')}</table>`}
+  {const alt=L.sessionsBetween(cd,CL().sessions,m+'-01',last).filter(s=>s.tipo==='normal'&&s.estado!=='cancelada'&&s.estado!=='feriado'&&isAlt(s));
+   if(alt.length)h+=`<table class="box"><tr><th colspan="2" class="hd">Horário diferente do habitual</th></tr>${alt.map(s=>`<tr><td>${fmtD(s.data).slice(0,5)}${ferOf(s)?' ('+esc(ferOf(s))+')':''} · Aula ${esc(turma(s.turma).nome)}:</td><td>${hh(s.ini)} – ${hh(s.fim)}</td></tr>`).join('')}</table>`}
   for(const e of Object.values(ctx().events).filter(e=>e.data>=m+'-01'&&e.data<=last&&(e.horario||'').trim()).sort((a,b)=>a.data<b.data?-1:1)){
     h+=`<table class="box"><tr><th colspan="2" class="ev">Horário ${esc(e.nome)}</th></tr>${e.horario.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const i=Math.max(l.lastIndexOf(';'),l.lastIndexOf('|'));return i>0?`<tr><td>${esc(l.slice(0,i).trim())}</td><td>${esc(l.slice(i+1).trim())}</td></tr>`:`<tr><td colspan="2">${esc(l)}</td></tr>`}).join('')}</table>`}
   if(frase?.texto)h+=`<div class="fr"><div>Frase do Mês:</div><blockquote>“${esc(frase.texto.replace(/^[“"]|[”"]$/g,''))}”</blockquote>${frase.autor?`<div class="au">${esc(frase.autor)}</div>`:''}</div>`;
@@ -609,6 +636,7 @@ const shH=t=>`<div class="sh-h"><h2 style="margin:0">${t}</h2><button class="x" 
 /* ---------- VOLTAR ---------- */
 function goBack(){if(!$('#sheet').classList.contains('hidden')){closeSheet();return true}
   if(UI.club&&UI.tab==='mes'){UI.tab='aulas';UI.draft=null;render();window.scrollTo(0,0);return true}
+  if(UI.club&&SEC_SUB.includes(UI.tab)){UI.tab='secretaria';UI.draft=null;render();window.scrollTo(0,0);return true}
   if(UI.club&&MAIS_SUB.includes(UI.tab)){UI.tab='mais';UI.draft=null;render();window.scrollTo(0,0);return true}
   if(UI.club){UI.club=null;UI.draft=null;render();window.scrollTo(0,0);return true}return false}
 try{history.pushState({ws:1},'')}catch(e){}
@@ -767,6 +795,7 @@ const A={
   newEvA:()=>{evDraft(null);const m=UI.aul.m;if(m&&today().slice(0,7)!==m){UI.draft.ev.data=m+'-01';renderEv()}},
   evAlso:d=>{UI.draft.also=UI.draft.also||{};UI.draft.also[d.id]=!UI.draft.also[d.id];renderEv()},
   planMes:()=>planDraft(),
+  cartRep:()=>printEntReport(UI.con.m||curMonth(K())),
   doPlan:()=>{const d=UI.draft;const M=copy(META());M.frases=M.frases||{};M.frases[d.m]={texto:d.texto.trim(),autor:d.autor.trim()};api().putMeta(M);printMonth(d.m,M.frases[d.m])},
   evAth:d=>{UI.draft.partOpen=true;const ev=UI.draft.ev;if(ev.atl[d.id])delete ev.atl[d.id];else ev.atl[d.id]={estado:'falta'};renderEv()},
   evCycle:d=>{const x=UI.draft.ev.atl[d.id];x.estado=x.estado==='falta'?'cobrado':x.estado==='cobrado'?'entregue':'falta';if(x.estado==='cobrado'){x.v=+UI.draft.ev.valor||0;x.d=today()}renderEv()},
