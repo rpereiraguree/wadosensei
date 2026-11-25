@@ -105,7 +105,8 @@ function trocaIn(s){return s.vem||{}}
 function expectedList(s){const k=L.seasonOf(s.data),wd=L.wdOf(s.data),m=s.data.slice(0,7);const out=trocaOut(s),inn=trocaIn(s);
   const base=athsIn(k,s.turma,m).filter(a=>(L.enr(a,k).dias||[]).includes(wd)&&!out[a.id]);const extra=Object.keys(inn).map(id=>ctx().athletes[id]).filter(a=>a&&!base.includes(a));return[...base,...extra]}
 function sessCounts(s){const exp=expectedList(s).length;const P=Object.values(s.pres||{}).filter(v=>v==='P').length;return{exp,P}}
-function chipOf(s){const t=today();if(s.estado==='feriado')return `<span class="tag t-mut">${esc(s.motivo||'Feriado')}</span>`;if(s.fer&&s.estado!=='cancelada')return `<span class="tag t-mut">${esc(s.fer)} · com aula</span>`;if(s.estado==='cancelada'){const r=L.reposedBy(CL().sessions,s.id);return `<span class="tag t-bad">Cancelada${r?' · reposta '+fmtD(r.data).slice(0,5):' · por repor'}</span>`}
+const isAlt=s=>!!(s.hOrig&&(s.hOrig.ini!==s.ini||s.hOrig.fim!==s.fim));
+function chipOf(s){const t=today();if(s.estado==='feriado')return `<span class="tag t-mut">${esc(s.motivo||'Feriado')}</span>`;if(s.fer&&s.estado!=='cancelada')return `<span class="tag t-blue">${esc(s.fer)} · com aula${isAlt(s)?' · horário diferente':''}</span>`;if(isAlt(s)&&s.estado!=='cancelada')return `<span class="tag t-blue">Horário diferente (era ${esc(s.hOrig.ini)})</span>`;if(s.estado==='cancelada'){const r=L.reposedBy(CL().sessions,s.id);return `<span class="tag t-bad">Cancelada${r?' · reposta '+fmtD(r.data).slice(0,5):' · por repor'}</span>`}
   if(s.virtual)return s.data<t?'<span class="tag t-warn">Por registar</span>':'';
   const lab=s.tipo==='reposicao'?'Reposição':s.tipo==='extra'?'Extra':'';
   if(s.estado!=='dada')return lab?`<span class="tag t-blue">${lab}</span>`:'';return lab?`<span class="tag t-blue">${lab}</span>`:''}
@@ -510,21 +511,23 @@ function printTest(){const s=ctx().tests[UI.tst.id],M=META(),cd=CD(),k=L.seasonO
 /* ---------- PLANO MENSAL ---------- */
 function planDraft(){const m=UI.aul.m||today().slice(0,7);const f=META().frases?.[m]||{};UI.draft={kind:'plan',m,texto:f.texto||'',autor:f.autor||''};UI.sheetLive=null;renderPlan()}
 function renderPlan(){const d=UI.draft;const rows=monthRows(d.m);
-  openSheet(shH('Plano do mês')+`<div class="card"><div class="sm"><b>${esc(planTitle())}</b> · ${mLabel(d.m)}</div><p class="muted sm">${rows.filter(r=>r.tipo!=='ev').length} aulas e reposições · ${rows.filter(r=>r.tipo==='ev').length} evento(s). Inclui reposições e eventos marcados para o mês; aulas canceladas, feriados e pausas ficam de fora.</p>
+  openSheet(shH('Plano do mês')+`<div class="card"><div class="sm"><b>${esc(planTitle())}</b> · ${mLabel(d.m)}</div><p class="muted sm">${rows.filter(r=>r.tipo!=='ev').length} aulas e reposições · ${rows.filter(r=>r.tipo==='ev').length} evento(s). Inclui reposições e eventos marcados para o mês; feriados e pausas aparecem como “Sem aula”, e as aulas com horário diferente ficam assinaladas a azul-claro com a hora indicada. Aulas canceladas ficam de fora.</p>
   <label>Frase do mês</label><textarea data-i="pl" data-k="texto" placeholder="A vida contrai-se e expande-se…">${esc(d.texto)}</textarea><label>Autor</label><input value="${esc(d.autor)}" data-i="pl" data-k="autor" placeholder="Anaïs Nin">
   <p class="muted sm">A frase fica guardada para o mês e aparece também no plano do outro clube.</p></div>
   <button class="btn block" data-a="doPlan">🖨 Imprimir / guardar PDF</button><p class="muted sm">No telemóvel, escolhe “Guardar como PDF” na janela de impressão para partilhar.</p>`)}
 function planTitle(){const cd=CD();const t=cd.cfg?.titulo;if(t)return t;const n=cd.nome.toUpperCase();return /WADO/.test(n)?n:n+' WADO KARATÉ'}
-function monthRows(m){const cd=CD();const last=L.addDays(L.addMonths(m,1)+'-01',-1);const ss=L.sessionsBetween(cd,CL().sessions,m+'-01',last).filter(s=>s.estado!=='cancelada'&&s.estado!=='feriado');
-  const loc=cd.cfg?.local||cd.nome;const byDate={};for(const s of ss){const t=s.tipo==='reposicao'?'rep':s.tipo==='extra'?'extra':'aula';const x=byDate[s.data]||(byDate[s.data]={data:s.data,tipo:t});if(t==='aula')x.tipo='aula'}
-  const rows=Object.values(byDate).map(x=>({data:x.data,tipo:x.tipo,nome:x.tipo==='rep'?'Aula Reposição':x.tipo==='extra'?'Aula Extra':'Aula',local:loc}));
+function monthRows(m){const cd=CD();const last=L.addDays(L.addMonths(m,1)+'-01',-1);const all=L.sessionsBetween(cd,CL().sessions,m+'-01',last);const ss=all.filter(s=>s.estado!=='cancelada'&&s.estado!=='feriado');
+  const loc=cd.cfg?.local||cd.nome;const byDate={};const PR={aula:3,hd:4,rep:2,extra:1};
+  for(const s of ss){const t=s.tipo==='reposicao'?'rep':s.tipo==='extra'?'extra':(s.fer||isAlt(s))?'hd':'aula';const x=byDate[s.data]||(byDate[s.data]={data:s.data,tipo:t,fer:''});if(PR[t]>PR[x.tipo])x.tipo=t;if(s.fer)x.fer=s.fer}
+  for(const s of all.filter(s=>s.estado==='feriado'))if(!byDate[s.data])byDate[s.data]={data:s.data,tipo:'nf',fer:s.motivo||'Feriado'};
+  const rows=Object.values(byDate).map(x=>({data:x.data,tipo:x.tipo,nome:x.tipo==='rep'?'Aula Reposição':x.tipo==='extra'?'Aula Extra':x.tipo==='nf'?`Sem aula (${x.fer})`:x.tipo==='hd'?(x.fer?`Aula (${x.fer})`:'Aula · horário diferente'):'Aula',local:x.tipo==='nf'?'—':loc}));
   for(const e of Object.values(ctx().events))if(e.data>=m+'-01'&&e.data<=last)rows.push({data:e.data,tipo:'ev',nome:e.nome,local:e.local||'',ev:e});
   return rows.sort((a,b)=>a.data!==b.data?(a.data<b.data?-1:1):(a.tipo==='ev'?1:-1)).map(r=>({...r,sem:L.weekNo(cd,r.data)}))}
 const hh=t=>t?t.replace(':','h'):'';
 function printMonth(m,frase){const cd=CD(),k=L.seasonOf(m+'-15');const rows=monthRows(m);const last=L.addDays(L.addMonths(m,1)+'-01',-1);
   const weeks=[];for(const r of rows){const w=weeks[weeks.length-1];if(w&&w.sem===r.sem)w.rows.push(r);else weeks.push({sem:r.sem,rows:[r]})}
   const mes=L.MESES[+m.slice(5,7)-1];let tb='';let first=true;
-  for(const w of weeks)w.rows.forEach((r,i)=>{const cls=r.tipo==='rep'?'rp':r.tipo==='ev'?'ev':'';
+  for(const w of weeks)w.rows.forEach((r,i)=>{const cls=r.tipo==='rep'?'rp':r.tipo==='ev'?'ev':r.tipo==='nf'?'nf':r.tipo==='hd'?'hd':'';
     tb+=`<tr>${first?`<td rowspan="${rows.length}" class="mc">${mes}</td>`:''}${i===0?`<td rowspan="${w.rows.length}" class="mc">${w.sem}</td>`:''}<td class="${cls}">${esc(r.nome)}</td><td class="${cls}">${fmtD(r.data).slice(0,5)}</td><td class="${cls}">${esc(r.local)}</td></tr>`;first=false});
   let h=`<div class="mp"><h1>${esc(planTitle())} ${k} – ${+k+1}</h1><h3>Calendário ${mes}</h3>
    <table class="cal"><thead><tr><th>Mês</th><th>Semana</th><th>Evento</th><th>Data</th><th>Local</th></tr></thead><tbody>${tb||'<tr><td colspan="5">Sem atividades</td></tr>'}</tbody></table>`;
@@ -533,6 +536,8 @@ function printMonth(m,frase){const cd=CD(),k=L.seasonOf(m+'-15');const rows=mont
   const reps=Object.values(CL().sessions).filter(s=>s.tipo==='reposicao'&&s.estado!=='cancelada'&&s.data>=m+'-01'&&s.data<=last);
   if(reps.length){const slots={};reps.forEach(s=>{const key=`${s.ini}|${s.fim}`;(slots[key]=slots[key]||new Set()).add(turma(s.turma).nome)});const keys=Object.keys(slots).sort();
     const single=keys.length===1;h+=`<table class="box"><tr><th colspan="2" class="rp">Horário Aula de Reposição</th></tr>${keys.map(key=>{const[a,b]=key.split('|');const lab=[...slots[key]].join(' e ');return single&&slots[key].size>1?`<tr><td colspan="2">${hh(a)} – ${hh(b)}</td></tr>`:`<tr><td>Aula ${esc(lab)}:</td><td>${hh(a)} – ${hh(b)}</td></tr>`}).join('')}</table>`}
+  {const alt=L.sessionsBetween(cd,CL().sessions,m+'-01',last).filter(s=>s.tipo==='normal'&&s.estado!=='cancelada'&&s.estado!=='feriado'&&(s.fer||isAlt(s)));
+   if(alt.length)h+=`<table class="box"><tr><th colspan="2" class="hd">Horário diferente do habitual</th></tr>${alt.map(s=>`<tr><td>${fmtD(s.data).slice(0,5)}${s.fer?' ('+esc(s.fer)+')':''} · Aula ${esc(turma(s.turma).nome)}:</td><td>${hh(s.ini)} – ${hh(s.fim)}</td></tr>`).join('')}</table>`}
   for(const e of Object.values(ctx().events).filter(e=>e.data>=m+'-01'&&e.data<=last&&(e.horario||'').trim()).sort((a,b)=>a.data<b.data?-1:1)){
     h+=`<table class="box"><tr><th colspan="2" class="ev">Horário ${esc(e.nome)}</th></tr>${e.horario.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const i=Math.max(l.lastIndexOf(';'),l.lastIndexOf('|'));return i>0?`<tr><td>${esc(l.slice(0,i).trim())}</td><td>${esc(l.slice(i+1).trim())}</td></tr>`:`<tr><td colspan="2">${esc(l)}</td></tr>`}).join('')}</table>`}
   if(frase?.texto)h+=`<div class="fr"><div>Frase do Mês:</div><blockquote>“${esc(frase.texto.replace(/^[“"]|[”"]$/g,''))}”</blockquote>${frase.autor?`<div class="au">${esc(frase.autor)}</div>`:''}</div>`;
@@ -664,9 +669,9 @@ const A={
   alterUndo:()=>{const s=getSessById(UI.draft.id);if(!s)return;const r=L.reposedBy(CL().sessions,s.id);if(r&&!confirm('Esta aula já tem uma reposição marcada. Anular o cancelamento e apagar a reposição?'))return;
     if(r&&!Object.keys(r.pres||{}).length)del('sessions',r.id);else if(r)put('sessions',r.id,{...copy(r),repoe:[],tipo:'extra'});
     s.estado='prevista';s.motivo='';if(s.virtual===false&&!s.plano&&!s.nota)del('sessions',s.id);else putSess(s);UI.draft=null;closeSheet();toast('Cancelamento anulado')},
-  alterTime:()=>{const d=UI.draft;const s=getSessById(d.id);if(!d.nini){toast('Falta a hora');return}putSess({...s,ini:d.nini,fim:d.nfim});UI.draft=null;closeSheet();toast('Hora alterada')},
-  alterFer:()=>{const d=UI.draft;const s=getSessById(d.id);if(!d.nini){toast('Falta a hora');return}putSess({...s,estado:'prevista',fer:s.motivo||'Feriado',motivo:'',ini:d.nini,fim:d.nfim});UI.draft=null;closeSheet();toast('Aula marcada no feriado')},
-  alterFerUndo:()=>{const d=UI.draft;const s=getSessById(d.id);const n=Object.keys(s.pres||{}).length;if(n&&!confirm('Esta aula já tem presenças registadas. Voltar mesmo a feriado?'))return;const x={...s,estado:'feriado',motivo:s.fer};delete x.fer;putSess(x);UI.draft=null;closeSheet()},
+  alterTime:()=>{const d=UI.draft;const s=getSessById(d.id);if(!d.nini){toast('Falta a hora');return}putSess({...s,ini:d.nini,fim:d.nfim,hOrig:s.hOrig||{ini:s.ini||'',fim:s.fim||''}});UI.draft=null;closeSheet();toast('Hora alterada')},
+  alterFer:()=>{const d=UI.draft;const s=getSessById(d.id);if(!d.nini){toast('Falta a hora');return}putSess({...s,estado:'prevista',fer:s.motivo||'Feriado',motivo:'',ini:d.nini,fim:d.nfim,hOrig:s.hOrig||{ini:s.ini||'',fim:s.fim||''}});UI.draft=null;closeSheet();toast('Aula marcada no feriado')},
+  alterFerUndo:()=>{const d=UI.draft;const s=getSessById(d.id);const n=Object.keys(s.pres||{}).length;if(n&&!confirm('Esta aula já tem presenças registadas. Voltar mesmo a feriado?'))return;const x={...s,estado:'feriado',motivo:s.fer};delete x.fer;if(x.hOrig){x.ini=x.hOrig.ini;x.fim=x.hOrig.fim;delete x.hOrig}putSess(x);UI.draft=null;closeSheet()},
   alterMove:()=>{const d=UI.draft;const s=getSessById(d.id);if(!d.ndata){toast('Falta a data');return}putSess({...s,data:d.ndata,ini:d.nini,fim:d.nfim});UI.draft=null;closeSheet();toast('Aula alterada')},
   sessDelAlt:()=>{if(!confirm('Apagar esta aula?'))return;del('sessions',UI.draft.id);UI.draft=null;closeSheet()},
   sessTr:d=>{UI.sess.tr=UI.sess.tr===d.id?null:d.id;UI.sess.aw=null;renderSess()},
