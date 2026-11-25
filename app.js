@@ -43,7 +43,7 @@ if('serviceWorker' in navigator&&!DEMO)navigator.serviceWorker.register('sw.js')
 addEventListener('online',()=>render());addEventListener('offline',()=>render());
 
 /* ---------- render principal ---------- */
-const TABS=[['aulas','Aulas','<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'],
+const TABS=[['aulas','Início','<rect x="3" y="3" width="8" height="10" rx="2"/><rect x="3" y="16" width="8" height="5" rx="2"/><rect x="13" y="11" width="8" height="10" rx="2"/><rect x="13" y="3" width="8" height="5" rx="2"/>'],
   ['atletas','Atletas','<circle cx="9" cy="8" r="4"/><path d="M2 21v-1a6 6 0 0 1 12 0v1M16 3.5a4 4 0 0 1 0 8M22 21v-1a6 6 0 0 0-4-5.6"/>'],
   ['testes','Testes','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/>'],
   ['mais','Mais','<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>']];
@@ -82,6 +82,8 @@ V.picker=clubs=>{const all=clubs.flatMap(c=>tasksOf(c.doc.id).todo.map(t=>({t,c}
 const clubShort=d=>d.curto||String(d.nome||'').split(' ')[0];
 function tasksOf(cid){const all=Object.values(DB.clubs[cid]?.tasks||{});return{todo:all.filter(t=>!t.done).sort((a,b)=>(a.ord??0)-(b.ord??0)),done:all.filter(t=>t.done).sort((a,b)=>(b.doneAt||'')<(a.doneAt||'')?-1:1)}}
 function purgeTasks(){const lim=L.addDays(today(),-7);tasksOf(UI.club).done.filter(t=>(t.doneAt||'')<lim).forEach(t=>del('tasks',t.id))}
+function bdCard(){const k=K(),t=today(),m=t.slice(0,7);const bds=athsIn(k,'',curMonth(k)).filter(a=>a.nasc&&a.nasc.slice(5,7)===m.slice(5,7)).sort((a,b)=>a.nasc.slice(8)<b.nasc.slice(8)?-1:1);if(!bds.length)return'';
+  return `<div class="card bdc"><div class="ch"><h3>🎂 Aniversários de ${esc(L.MESES[+m.slice(5,7)-1])}</h3><span class="muted sm">${bds.length}</span></div>${bds.map(a=>{const d=m+'-'+a.nasc.slice(8);const past=d<t,hoje=d===t;return `<div class="bdr${past?' past':''}${hoje?' hoje':''}"><span class="grow">${esc(nameOf(a))}</span><span class="muted sm">${hoje?'<b>hoje</b>':DOW[L.wdOf(d)]+' '+a.nasc.slice(8)+'/'+m.slice(5,7)} · faz ${L.ageAt(a.nasc,d)}</span></div>`}).join('')}</div>`}
 function tasksCard(){const{todo,done}=tasksOf(UI.club);
   return `<div class="card tasks"><div class="ch"><h3>A fazer</h3><span class="muted sm">${todo.length||''}</span></div>
    <div class="row gap tnew"><input id="tNew" placeholder="Nova tarefa…" enterkeyhint="done" autocomplete="off"><button class="btn" data-a="tAdd" aria-label="Acrescentar">+</button></div>
@@ -142,7 +144,7 @@ V.aulas=()=>{const cd=CD(),t=today(),cx=ctx();
   return `<div class="topcard"><div class="ch"><h3>${d===t?'Aulas de hoje':'Próximas aulas'}</h3><span class="muted sm">${DOWL[L.wdOf(d)]} ${fmtD(d)}</span></div>
     ${ss.length?`<div class="list">${ss.map(s=>sessRow(s)).join('')}</div>`:empty('Sem aulas nos próximos dias.')}
     ${nextEv.length?`<div class="list">${nextEv.map(e=>evRow(e,true)).join('')}</div>`:''}</div>
-   <div class="row gap"><button class="btn grow" data-a="goMes">Aulas do mês</button><button class="btn ghost" data-a="addMenu">+ Adicionar</button><button class="btn ${al?'alert':'ghost'}" data-a="showAlerts">${al} Alerta${al===1?'':'s'}</button></div>${(purgeTasks(),tasksCard())}`};
+   ${bdCard()}   <div class="row gap"><button class="btn grow" data-a="goMes">Aulas do mês</button><button class="btn ghost" data-a="addMenu">+ Adicionar</button><button class="btn ${al?'alert':'ghost'}" data-a="showAlerts">${al} Alerta${al===1?'':'s'}</button></div>${(purgeTasks(),tasksCard())}`};
 V.mes=()=>{const cd=CD(),k=K(),t=today(),cx=ctx(),ep=cd.epocas[k]||{};
   const months=[];if(ep.inicio){let m=ep.inicio.slice(0,7);const end=(ep.fim||L.addDays(ep.inicio,330)).slice(0,7);while(m<=end){months.push(m);m=L.addMonths(m,1)}}
   if(!UI.aul.m||!months.includes(UI.aul.m))UI.aul.m=months.includes(t.slice(0,7))?t.slice(0,7):months[months.length-1];const m=UI.aul.m;
