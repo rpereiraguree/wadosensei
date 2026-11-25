@@ -105,14 +105,14 @@ function trocaIn(s){return s.vem||{}}
 function expectedList(s){const k=L.seasonOf(s.data),wd=L.wdOf(s.data),m=s.data.slice(0,7);const out=trocaOut(s),inn=trocaIn(s);
   const base=athsIn(k,s.turma,m).filter(a=>(L.enr(a,k).dias||[]).includes(wd)&&!out[a.id]);const extra=Object.keys(inn).map(id=>ctx().athletes[id]).filter(a=>a&&!base.includes(a));return[...base,...extra]}
 function sessCounts(s){const exp=expectedList(s).length;const P=Object.values(s.pres||{}).filter(v=>v==='P').length;return{exp,P}}
-function chipOf(s){const t=today();if(s.estado==='feriado')return `<span class="tag t-mut">${esc(s.motivo||'Feriado')}</span>`;if(s.estado==='cancelada'){const r=L.reposedBy(CL().sessions,s.id);return `<span class="tag t-bad">Cancelada${r?' · reposta '+fmtD(r.data).slice(0,5):' · por repor'}</span>`}
+function chipOf(s){const t=today();if(s.estado==='feriado')return `<span class="tag t-mut">${esc(s.motivo||'Feriado')}</span>`;if(s.fer&&s.estado!=='cancelada')return `<span class="tag t-mut">${esc(s.fer)} · com aula</span>`;if(s.estado==='cancelada'){const r=L.reposedBy(CL().sessions,s.id);return `<span class="tag t-bad">Cancelada${r?' · reposta '+fmtD(r.data).slice(0,5):' · por repor'}</span>`}
   if(s.virtual)return s.data<t?'<span class="tag t-warn">Por registar</span>':'';
   const lab=s.tipo==='reposicao'?'Reposição':s.tipo==='extra'?'Extra':'';
   if(s.estado!=='dada')return lab?`<span class="tag t-blue">${lab}</span>`:'';return lab?`<span class="tag t-blue">${lab}</span>`:''}
 function sessRow(s,showDate,extraCls){const c=sessCounts(s);const t=turma(s.turma);const past=s.data<today();
-  const info=s.estado==='cancelada'||s.estado==='feriado'?esc(s.motivo||''):`${c.P} presentes${s.tipo==='normal'?' de '+c.exp:''}`;
+  const info=s.estado==='feriado'?'':s.estado==='cancelada'?esc(s.motivo||''):`${c.P} presentes${s.tipo==='normal'?' de '+c.exp:''}`;
   return `<div class="li ${past?'past':''} ${extraCls||''}" data-a="openSess" data-id="${s.id}"><div class="grow"><div class="nm">${showDate?`${DOW[L.wdOf(s.data)]} ${fmtD(s.data).slice(0,5)} · `:''}<span class="tn">${esc(t.nome)}</span> <span class="muted sm">${esc(s.ini||'')}${s.fim?'–'+esc(s.fim):''}</span></div>
-    <div class="muted sm">${s.plano?`<b class="code">${esc(s.plano)}</b> · `:''}${info} ${chipOf(s)}</div></div>${s.estado==='feriado'?'':`<button class="btn sm ghost" data-a="alterSess" data-id="${s.id}">Alterar</button>`}</div>`}
+    <div class="muted sm">${s.plano?`<b class="code">${esc(s.plano)}</b> · `:''}${info} ${chipOf(s)}</div></div><button class="btn sm ghost" data-a="alterSess" data-id="${s.id}">Alterar</button></div>`}
 function evRow(e,compact){const t=today();const dd=L.dayDiff(t,e.data);return `<div class="li ev" data-a="editEv" data-id="${e.id}"><div class="grow"><div class="nm">${DOW[L.wdOf(e.data)]} ${fmtD(e.data).slice(0,5)} · ${esc(e.nome)}</div><div class="muted sm">${esc(e.local||'')}${compact?(dd===0?' · hoje':dd===1?' · amanhã':` · daqui a ${dd} dias`):((e.horario||'').trim()?' · '+esc(e.horario.trim().split('\n')[0]):'')}</div></div><span class="tag t-warn">Evento</span></div>`}
 function alertRows(){const cd=CD(),k=K(),t=today(),cx=ctx(),M=META();const al=[];const m=curMonth(k);const ins=athsIn(k,'',m);
   const pend=L.pendingCancelled(CL().sessions);
@@ -196,6 +196,10 @@ function alterDraft(id){const s=getSessById(id);if(!s)return;const r=L.reposedBy
   UI.draft={kind:'alter',id,s,motivo:s.motivo||'',repo:!r,rdata:sat,rini:'10:00',rfim:'11:00',ndata:s.data,nini:s.ini||'',nfim:s.fim||''};UI.sheetLive=null;renderAlter()}
 function renderAlter(){const d=UI.draft,s=d.s;const t=turma(s.turma);const r=L.reposedBy(CL().sessions,s.id);
   let h=shH('Alterar aula')+`<div class="muted" style="margin:-6px 0 10px"><b>${esc(t.nome)}</b> · ${DOWL[L.wdOf(s.data)]} ${fmtD(s.data)} · ${esc(s.ini||'')}</div>`;
+  if(s.estado==='feriado'){h+=`<div class="card"><h3>${esc(s.motivo||'Feriado')}</h3><p class="muted sm" style="margin-top:0">Se vais dar aula neste feriado, confirma a hora.</p><div class="grid3"><div><label>Início</label><input type="time" value="${d.nini}" data-i="dr" data-k="nini"></div><div><label>Fim</label><input type="time" value="${d.nfim}" data-i="dr" data-k="nfim"></div><div></div></div>
+    <button class="btn block" data-a="alterFer">Dar aula neste dia</button></div>`;openSheet(h);return}
+  if(s.tipo==='normal'&&s.estado!=='cancelada'){h+=`<div class="card"><h3>Mudar a hora</h3><p class="muted sm" style="margin-top:0">A aula mantém-se neste dia, só muda o horário.</p><div class="grid3"><div><label>Início</label><input type="time" value="${d.nini}" data-i="dr" data-k="nini"></div><div><label>Fim</label><input type="time" value="${d.nfim}" data-i="dr" data-k="nfim"></div><div></div></div>
+    <button class="btn block" data-a="alterTime">Guardar hora</button>${s.fer?`<button class="btn ghost block" style="margin-top:8px" data-a="alterFerUndo">Afinal não há aula (volta a feriado)</button>`:''}</div>`}
   if(s.tipo!=='normal'){h+=`<div class="card"><h3>Mudar data ou hora</h3><div class="grid3"><div><label>Data</label><input type="date" value="${d.ndata}" data-i="dr" data-k="ndata"></div><div><label>Início</label><input type="time" value="${d.nini}" data-i="dr" data-k="nini"></div><div><label>Fim</label><input type="time" value="${d.nfim}" data-i="dr" data-k="nfim"></div></div>
     <button class="btn block" data-a="alterMove">Guardar</button></div><button class="btn danger block" data-a="sessDelAlt">Apagar esta ${s.tipo==='reposicao'?'reposição':'aula extra'}</button>`;openSheet(h);return}
   if(s.estado==='cancelada'){h+=`<div class="card"><b>Cancelada</b>${s.motivo?' · '+esc(s.motivo):''}<div class="sm muted" style="margin-top:4px">${r?`Reposta em ${DOW[L.wdOf(r.data)]} ${fmtD(r.data)} (${esc(r.ini||'')})`:'Ainda sem reposição.'}</div></div>
@@ -660,6 +664,9 @@ const A={
   alterUndo:()=>{const s=getSessById(UI.draft.id);if(!s)return;const r=L.reposedBy(CL().sessions,s.id);if(r&&!confirm('Esta aula já tem uma reposição marcada. Anular o cancelamento e apagar a reposição?'))return;
     if(r&&!Object.keys(r.pres||{}).length)del('sessions',r.id);else if(r)put('sessions',r.id,{...copy(r),repoe:[],tipo:'extra'});
     s.estado='prevista';s.motivo='';if(s.virtual===false&&!s.plano&&!s.nota)del('sessions',s.id);else putSess(s);UI.draft=null;closeSheet();toast('Cancelamento anulado')},
+  alterTime:()=>{const d=UI.draft;const s=getSessById(d.id);if(!d.nini){toast('Falta a hora');return}putSess({...s,ini:d.nini,fim:d.nfim});UI.draft=null;closeSheet();toast('Hora alterada')},
+  alterFer:()=>{const d=UI.draft;const s=getSessById(d.id);if(!d.nini){toast('Falta a hora');return}putSess({...s,estado:'prevista',fer:s.motivo||'Feriado',motivo:'',ini:d.nini,fim:d.nfim});UI.draft=null;closeSheet();toast('Aula marcada no feriado')},
+  alterFerUndo:()=>{const d=UI.draft;const s=getSessById(d.id);const n=Object.keys(s.pres||{}).length;if(n&&!confirm('Esta aula já tem presenças registadas. Voltar mesmo a feriado?'))return;const x={...s,estado:'feriado',motivo:s.fer};delete x.fer;putSess(x);UI.draft=null;closeSheet()},
   alterMove:()=>{const d=UI.draft;const s=getSessById(d.id);if(!d.ndata){toast('Falta a data');return}putSess({...s,data:d.ndata,ini:d.nini,fim:d.nfim});UI.draft=null;closeSheet();toast('Aula alterada')},
   sessDelAlt:()=>{if(!confirm('Apagar esta aula?'))return;del('sessions',UI.draft.id);UI.draft=null;closeSheet()},
   sessTr:d=>{UI.sess.tr=UI.sess.tr===d.id?null:d.id;UI.sess.aw=null;renderSess()},
