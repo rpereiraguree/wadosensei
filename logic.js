@@ -77,6 +77,11 @@ export function amigoWindows(ath,athletes,payments,len=3){const starts=[];
   if(ath.trazidoPor){const f=firstPaid(payments,ath.id);if(f)starts.push(f)}
   for(const o of Object.values(athletes))if(o.trazidoPor===ath.id){const f=firstPaid(payments,o.id);if(f)starts.push(f)}
   starts.sort();const w=[];let prevEnd=null;for(const s of starts){const a=prevEnd&&s<=prevEnd?addMonths(prevEnd,1):s;const b=addMonths(a,len-1);w.push([a,b]);prevEnd=b}return w}
+export function pausaIn(club,d){for(const p of (club.cfg?.pausas||[]))if(p.desde&&d>=p.desde&&d<=(p.ate||p.desde))return p.motivo||'Pausa';return null}
+// fração do mês com aulas (pausas reduzem; feriados não), arredondada ao quarto: −2 semanas ≈ meio mês
+export function pauseFactor(club,turma,m){const last=addDays(addMonths(m,1)+'-01',-1);let tot=0,off=0,mot='';
+  for(let d=m+'-01';d<=last;d=addDays(d,1)){const ss=slotsOn(club,d).filter(s=>!turma||s.t===turma);if(!ss.length)continue;tot+=ss.length;const p=pausaIn(club,d);if(p){off+=ss.length;mot=mot||p}}
+  if(!tot||!off)return{f:1,motivo:''};return{f:Math.round((tot-off)/tot*4)/4,motivo:mot}}
 export function monthValue(club,ath,ctx,k,m){const e=enr(ath,k)||{};const f=freqAt(e,m);const man=hist(e.manual,m);
   if(man&&man.v!==''&&man.v!=null)return{v:+man.v,f,base:+man.v,desc:[],descTot:0,manual:man.nota||'valor especial'};
   const vv=hist(club.cfg?.valores,m)||{};const base=+(vv[f]??vv[2]??0);const desc=[];
@@ -85,7 +90,7 @@ export function monthValue(club,ath,ctx,k,m){const e=enr(ath,k)||{};const f=freq
   r=rule('irmaoOutra');if(r&&val(r)&&ath.irmaoOutra)desc.push(['Irmão noutra modalidade',val(r)]);
   r=rule('amigo');if(r&&val(r)&&amigoWindows(ath,ctx.athletes,ctx.payments,+r.meses||3).some(([a,b])=>m>=a&&m<=b))desc.push(['Traz um amigo',val(r)]);
   let tot=desc.reduce((s,x)=>s+x[1],0);const max=club.cfg?.descMax===''||club.cfg?.descMax==null?Infinity:+club.cfg.descMax;if(tot>max)tot=max;
-  return{v:round2(Math.max(0,base-tot)),f,base,desc,descTot:tot}}
+  const pz=pauseFactor(club,e.turma,m);return{v:round2(Math.max(0,base-tot)*pz.f),f,base,desc,descTot:tot,pausa:pz.f<1?pz:null}}
 export function monthStatus(club,ath,ctx,k,m){const e=enr(ath,k);if(!e||!activeIn(ath,k,m)||!(club.epocas?.[k]?.meses||[]).includes(m))return null;
   const p=ctx.payments[m]?.[ath.id];
   if(p?.s==='P')return{st:'pago',v:+p.v,d:p.d||'',f:freqAt(e,m)};
@@ -97,10 +102,10 @@ export function monthStatus(club,ath,ctx,k,m){const e=enr(ath,k);if(!e||!activeI
 export function dueList(club,ctx,k,upto){const o=[];for(const m of (club.epocas?.[k]?.meses||[])){if(m>upto)continue;
   for(const a of Object.values(ctx.athletes)){const s=monthStatus(club,a,ctx,k,m);if(s&&s.st==='falta')o.push({id:a.id,m,v:s.v,f:s.val.f})}}return o}
 export function recebido(ctx,m){let r=0;const p=ctx.payments[m]||{};for(const id in p)if(p[id].s==='P')r+=+p[id].v||0;return round2(r)}
-export function finGestao(club,ctx,k,m){const cfg=club.cfg||{};const pct=(+hist(cfg.pctEspaco,m)?.v||0)/100,sh=(+cfg.poupShare||0)/100;
+export function finGestao(club,ctx,k,m){const cfg=club.cfg||{};const pct=(+hist(cfg.pctEspaco,m)?.v||0)/100,sh=(+(cfg.poupShare??50))/100;
   const rec=recebido(ctx,m),poup=rec>0?(+hist(cfg.poupMensal,m)?.v||0):0;
   const due=dueList(club,ctx,k,m).reduce((a,x)=>a+x.v,0);
-  return{rec,poup,pct:pct*100,ent:round2(rec*pct-poup*sh),tr:round2(rec*(1-pct)-poup*(1-sh)),due:round2(due),dueEnt:round2(due*pct),dueTr:round2(due*(1-pct))}}
+  return{rec,poup,sh:sh*100,pct:pct*100,ent:round2(rec*pct-poup*sh),tr:round2(rec*(1-pct)-poup*(1-sh)),due:round2(due),dueEnt:round2(due*pct),dueTr:round2(due*(1-pct))}}
 export function poupanca(club,ctx,k){const cfg=club.cfg||{};const ep=club.epocas?.[k]||{};let ent=0;const now=today().slice(0,7);
   for(const m of (ep.meses||[])){if(m>now)break;if(recebido(ctx,m)>0)ent+=+hist(cfg.poupMensal,m)?.v||0}
   let said=0,pess=0,reemb=0,aj=0;const movs=Object.values(ctx.ledger||{}).filter(x=>seasonOf(x.data)===k).sort((a,b)=>a.data<b.data?1:-1);
@@ -109,7 +114,7 @@ export function poupanca(club,ctx,k){const cfg=club.cfg||{};const ep=club.epocas
 export function profMonth(club,ctx,k,m){const cfg=club.cfg||{};const ativos=Object.values(ctx.athletes).filter(a=>activeIn(a,k,m)).length;
   const days=new Set(Object.values(ctx.sessions).filter(s=>isGiven(s)&&s.data.slice(0,7)===m).map(s=>s.data));
   const va=+cfg.valorAluno||0,vl=+cfg.valorAula||0;const r=ctx.receitas?.[m];
-  const porAluno=round2(ativos*va),porAula=round2(days.size*vl);const prev=cfg.modeloPag==='aula'?porAula:porAluno;
+  const porAluno=round2(Object.values(ctx.athletes).filter(a=>activeIn(a,k,m)).reduce((t,a)=>t+va*pauseFactor(club,enr(a,k)?.turma,m).f,0)),porAula=round2(days.size*vl);const prev=cfg.modeloPag==='aula'?porAula:porAluno;
   return{ativos,aulas:days.size,porAluno,porAula,prev,rec:r?+r.valor:null,recD:r?.data||'',nota:r?.nota||'',dif:r?round2(+r.valor-prev):null}}
 
 /* ---------- Quotas e taxas ---------- */
